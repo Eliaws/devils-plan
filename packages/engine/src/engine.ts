@@ -1,7 +1,8 @@
+import { clone } from './clone.ts';
 import { placeBid, scout, submitPlan } from './planning.ts';
 import { resolveRound } from './resolution.ts';
 import { endRound, finishGame } from './round.ts';
-import { GameRuleError, allMonstersDefeated } from './state.ts';
+import { allMonstersDefeated, GameRuleError } from './state.ts';
 import type { Action, ApplyResult, GameEvent, GameState } from './types.ts';
 
 /**
@@ -9,7 +10,7 @@ import type { Action, ApplyResult, GameEvent, GameState } from './types.ts';
  * et les événements produits. Fonction pure : l'état reçu n'est jamais modifié.
  */
 export function apply(state: GameState, action: Action): ApplyResult {
-  const next = structuredClone(state);
+  const next = clone(state);
   const events: GameEvent[] = [];
   try {
     switch (action.type) {

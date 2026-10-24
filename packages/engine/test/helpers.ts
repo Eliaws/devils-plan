@@ -1,15 +1,19 @@
 import { expect } from 'vitest';
+import type { CardSet, EquipmentId, MonsterId, SlotIndex, SpecialId } from '../src/cards.ts';
 import { apply, createGame } from '../src/index.ts';
-import type { EquipmentId, MonsterId, SlotIndex, SpecialId } from '../src/cards.ts';
 import { freshMonster, getPlayer } from '../src/state.ts';
 import type { Action, GameEvent, GameState, Plan, PlayerId, PlayerSetup } from '../src/types.ts';
 
-export function newGame(playerCount = 3, options: { seed?: number; teams?: (string | undefined)[] } = {}): GameState {
+/** Les tests de base utilisent la version classique ; printed.test.ts couvre les cartes imprimées. */
+export function newGame(
+  playerCount = 3,
+  options: { seed?: number; teams?: (string | undefined)[]; cardSet?: CardSet } = {},
+): GameState {
   const players: PlayerSetup[] = Array.from({ length: playerCount }, (_, i) => {
     const teamId = options.teams?.[i];
     return { id: `p${i + 1}`, name: `Joueur ${i + 1}`, ...(teamId ? { teamId } : {}) };
   });
-  return createGame({ players, seed: options.seed ?? 42 }).state;
+  return createGame({ players, seed: options.seed ?? 42, cardSet: options.cardSet ?? 'classiques' }).state;
 }
 
 /** Applique une action qui doit réussir. */
@@ -51,7 +55,7 @@ export function biddingInOrder(state: GameState, order: PlayerId[]): { state: Ga
   expect([...order].sort()).toEqual(state.players.map((p) => p.id).sort());
   const events: GameEvent[] = [];
   let current = state;
-  order.forEach((id, i) => give(current, id, { coins: order.length - i }));
+  for (const [i, id] of order.entries()) give(current, id, { coins: order.length - i });
   for (const [i, id] of order.entries()) {
     const step = act(current, { type: 'bid', playerId: id, amount: order.length - i });
     current = step.state;
@@ -95,6 +99,9 @@ export function scoreOf(state: GameState, playerId: PlayerId): number {
   return state.sides.find((s) => s.id === sideId)!.score;
 }
 
-export function eventsOfType<T extends GameEvent['type']>(events: GameEvent[], type: T): Extract<GameEvent, { type: T }>[] {
+export function eventsOfType<T extends GameEvent['type']>(
+  events: GameEvent[],
+  type: T,
+): Extract<GameEvent, { type: T }>[] {
   return events.filter((e): e is Extract<GameEvent, { type: T }> => e.type === type);
 }

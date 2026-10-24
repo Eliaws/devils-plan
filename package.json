@@ -9,7 +9,16 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "concurrently -k -n server,web -c yellow,cyan \"npm run dev -w @chasseurs/server\" \"npm run dev -w @chasseurs/web\"",
+    "build": "npm run build -w @chasseurs/web",
+    "start": "npm run start -w @chasseurs/server",
     "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "biome check .",
+    "format": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.3",
+    "concurrently": "^10.0.6"
   }
 }

@@ -1,4 +1,4 @@
-import { EQUIPMENT, SLOTS } from './cards.ts';
+import { SLOTS } from './cards.ts';
 import { dealDamage } from './combat.ts';
 import { allMonstersDefeated, emptyRound, getPlayer } from './state.ts';
 import type { GameEvent, GameState, PlayerId, RankingEntry } from './types.ts';
@@ -27,10 +27,10 @@ function applyPoison(state: GameState, events: GameEvent[]): void {
     for (const poison of [...monster.poisons]) {
       // Le poison s'arrête à la mort du monstre et ne passe pas à son remplaçant.
       if (state.board[slot] !== monster) break;
-      poison.ticksLeft -= 1;
-      dealDamage(state, slot, EQUIPMENT.poison.perRound, poison.ownerId, 'poison-tick', false, events);
+      if (poison.ticksLeft !== null) poison.ticksLeft -= 1;
+      dealDamage(state, slot, poison.amount, poison.ownerId, 'poison-tick', false, events);
     }
-    monster.poisons = monster.poisons.filter((p) => p.ticksLeft > 0);
+    monster.poisons = monster.poisons.filter((p) => p.ticksLeft === null || p.ticksLeft > 0);
   }
 }
 

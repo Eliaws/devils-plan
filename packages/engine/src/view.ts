@@ -1,9 +1,11 @@
-import { MONSTERS, type EquipmentId, type MonsterId, type SpecialId } from './cards.ts';
+import { type CardSet, type EquipmentId, MONSTERS, type MonsterId, type SpecialId } from './cards.ts';
+import { clone } from './clone.ts';
 import { sameSide } from './state.ts';
 import type {
   GameEvent,
   GameResult,
   GameState,
+  PendingEffect,
   Phase,
   Plan,
   PlayerId,
@@ -22,6 +24,8 @@ export interface MonsterView {
   frozen: boolean;
   poisoned: boolean;
   netOwnerId: PlayerId | null;
+  /** Souffle de glace (cartes imprimées) : seul ce joueur peut blesser le monstre. */
+  protectedBy: PlayerId | null;
 }
 
 export interface PlayerView {
@@ -43,6 +47,7 @@ export interface PlayerView {
 
 export interface GameView {
   viewer: Viewer;
+  cardSet: CardSet;
   phase: Phase;
   round: number;
   board: (MonsterView | null)[];
@@ -58,6 +63,8 @@ export interface GameView {
   revealedBids: Record<PlayerId, number> | null;
   /** Rapport de L'éclaireur, pour le joueur qui l'a joué cette manche. */
   scouted: ScoutEntry[] | null;
+  /** Effets différés en attente (les cartes jouées sont publiques). */
+  pending: PendingEffect[];
   result: GameResult | null;
 }
 
@@ -67,8 +74,9 @@ function canSeePrivate(state: GameState, viewer: Viewer, playerId: PlayerId): bo
 
 export function viewFor(state: GameState, viewer: Viewer): GameView {
   const { round } = state;
-  return structuredClone({
+  return clone({
     viewer,
+    cardSet: state.cardSet,
     phase: state.phase,
     round: round.number,
     board: state.board.map((m) =>
@@ -79,6 +87,7 @@ export function viewFor(state: GameState, viewer: Viewer): GameView {
             frozen: m.frozen,
             poisoned: m.poisons.length > 0,
             netOwnerId: m.netOwnerId,
+            protectedBy: m.protectedBy,
           }
         : null,
     ),
@@ -110,6 +119,7 @@ export function viewFor(state: GameState, viewer: Viewer): GameView {
     order: round.order,
     revealedBids: round.revealedBids,
     scouted: viewer.kind === 'player' ? (round.scouted[viewer.playerId] ?? null) : null,
+    pending: state.pending,
     result: state.result,
   });
 }
@@ -132,5 +142,5 @@ export function eventsFor(state: GameState, events: GameEvent[], viewer: Viewer)
         result.push(event);
     }
   }
-  return structuredClone(result);
+  return clone(result);
 }

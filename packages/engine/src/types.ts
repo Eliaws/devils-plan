@@ -1,4 +1,4 @@
-import type { EquipmentId, MonsterId, SlotIndex, SpecialId } from './cards.ts';
+import type { CardSet, EquipmentId, MonsterId, SlotIndex, SpecialId } from './cards.ts';
 
 export type PlayerId = string;
 /** Camp qui marque les PV : une équipe, ou un joueur solo. */
@@ -16,17 +16,26 @@ export interface PlayerSetup {
 export interface GameConfig {
   players: PlayerSetup[];
   seed: number;
+  /** Version des cartes (par défaut : cartes imprimées). */
+  cardSet?: CardSet;
 }
 
 // --- Plan d'action d'une manche --------------------------------------------
 
 export type EquipmentPlay =
   | {
-      card: 'lame-du-chasseur' | 'poison' | 'souffle-de-glace' | 'citrouille-explosive' | 'charge-abomination' | 'morsure';
+      card:
+        | 'lame-du-chasseur'
+        | 'poison'
+        | 'souffle-de-glace'
+        | 'citrouille-explosive'
+        | 'charge-abomination'
+        | 'morsure';
       slot: SlotIndex;
     }
   | { card: 'double-griffe'; slots: [SlotIndex, SlotIndex] }
-  | { card: 'envoutement'; targetPlayerId: PlayerId; slot: SlotIndex };
+  /** targetPlayerId : joueur envoûté (version classique uniquement). */
+  | { card: 'envoutement'; slot: SlotIndex; targetPlayerId?: PlayerId };
 
 /** L'Éclaireur ne figure pas ici : il se joue via l'action `scout`, pendant la planification. */
 export type SpecialPlay =
@@ -35,7 +44,8 @@ export type SpecialPlay =
   | { card: 'echange-macabre' }
   | { card: 'sceau-annulation'; targetPlayerId: PlayerId }
   | { card: 'marque-du-chasseur' }
-  | { card: 'filet-magique'; slot: SlotIndex };
+  | { card: 'filet-magique'; slot: SlotIndex }
+  | { card: 'poing-infernal' };
 
 export interface Plan {
   equipment?: EquipmentPlay;
@@ -69,7 +79,9 @@ export interface SideState {
 
 export interface PoisonEffect {
   ownerId: PlayerId;
-  ticksLeft: number;
+  amount: number;
+  /** null : jusqu'à la mort du monstre. */
+  ticksLeft: number | null;
 }
 
 export interface MonsterInPlay {
@@ -79,7 +91,16 @@ export interface MonsterInPlay {
   poisons: PoisonEffect[];
   /** Joueur qui a posé un Filet magique : il récupère les Équipements à la mort du monstre. */
   netOwnerId: PlayerId | null;
+  /** Souffle de glace (cartes imprimées) : seul ce joueur peut blesser le monstre. */
+  protectedBy: PlayerId | null;
 }
+
+/** Effet différé (cartes imprimées) : se déclenche juste avant l'action de son auteur, à la manche `round`. */
+export type PendingEffect =
+  | { kind: 'charge'; ownerId: PlayerId; round: number; slot: SlotIndex; amount: number; marked: boolean }
+  | { kind: 'curse'; ownerId: PlayerId; round: number; monsterId: MonsterId }
+  | { kind: 'bite'; ownerId: PlayerId; round: number; monsterId: MonsterId }
+  | { kind: 'protection'; ownerId: PlayerId; round: number; monsterId: MonsterId };
 
 export interface ScoutEntry {
   slot: SlotIndex;
@@ -115,6 +136,7 @@ export interface GameResult {
 
 export interface GameState {
   rng: number;
+  cardSet: CardSet;
   phase: Phase;
   players: PlayerState[];
   sides: SideState[];
@@ -127,6 +149,7 @@ export interface GameState {
   equipmentDiscard: EquipmentId[];
   specialDeck: SpecialId[];
   specialDiscard: SpecialId[];
+  pending: PendingEffect[];
   round: RoundState;
   result: GameResult | null;
 }
@@ -140,7 +163,9 @@ export type Action =
 
 // --- Événements (pilotent les animations et le journal) --------------------
 
-export type DamageCause = EquipmentId | 'vague-de-choc' | 'citrouille-eclats' | 'poison-tick';
+export type DamageCause = EquipmentId | 'vague-de-choc' | 'citrouille-eclats' | 'poison-tick' | 'morsure-suite';
+
+export type DelayedCard = 'charge-abomination' | 'envoutement' | 'morsure';
 
 export type GameEvent =
   | { type: 'roundStarted'; round: number }
@@ -157,9 +182,21 @@ export type GameEvent =
   | { type: 'actionRevealed'; playerId: PlayerId; plan: Plan; redirectedTo: SlotIndex | null }
   | { type: 'monsterNetted'; playerId: PlayerId; slot: SlotIndex; monsterId: MonsterId }
   /** amount vaut null dans les vues : les PV restants sont secrets. */
-  | { type: 'monsterHit'; playerId: PlayerId; slot: SlotIndex; monsterId: MonsterId; cause: DamageCause; amount: number | null }
+  | {
+      type: 'monsterHit';
+      playerId: PlayerId;
+      slot: SlotIndex;
+      monsterId: MonsterId;
+      cause: DamageCause;
+      amount: number | null;
+    }
   | { type: 'attackLost'; playerId: PlayerId; slot: SlotIndex; cause: DamageCause }
   | { type: 'monsterFrozen'; slot: SlotIndex; monsterId: MonsterId }
+  | { type: 'monsterProtected'; playerId: PlayerId; slot: SlotIndex; monsterId: MonsterId }
+  | { type: 'protectionEnded'; playerId: PlayerId; monsterId: MonsterId }
+  | { type: 'damageBlocked'; playerId: PlayerId; protectorId: PlayerId; slot: SlotIndex; monsterId: MonsterId }
+  | { type: 'effectScheduled'; playerId: PlayerId; card: DelayedCard; slot: SlotIndex; monsterId: MonsterId | null }
+  | { type: 'effectTriggered'; playerId: PlayerId; card: DelayedCard; monsterId: MonsterId | null }
   | { type: 'monsterPoisoned'; playerId: PlayerId; slot: SlotIndex; monsterId: MonsterId }
   | {
       type: 'monsterKilled';
@@ -184,6 +221,4 @@ export interface EngineError {
   message: string;
 }
 
-export type ApplyResult =
-  | { ok: true; state: GameState; events: GameEvent[] }
-  | { ok: false; error: EngineError };
+export type ApplyResult = { ok: true; state: GameState; events: GameEvent[] } | { ok: false; error: EngineError };

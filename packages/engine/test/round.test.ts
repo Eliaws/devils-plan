@@ -12,7 +12,7 @@ describe('fin de manche et carte Spéciale', () => {
     expect(eventsOfType(events, 'specialAwarded')).toEqual([
       { type: 'specialAwarded', playerId: 'p3', sideId: 'solo:p3', card: after.players[2]!.specials[0] },
     ]);
-    expect(after.specialDeck).toHaveLength(13);
+    expect(after.specialDeck).toHaveLength(15);
   });
 
   it('en cas d’égalité, le premier dans l’ordre de passage l’emporte', () => {

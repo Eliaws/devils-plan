@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MONSTERS, MONSTER_IDS, SLOTS, apply, type SlotIndex } from '../src/index.ts';
-import { randomInt, type RngHolder } from '../src/rng.ts';
+import { apply, CARD_SETS, type CardSet, MONSTER_IDS, MONSTERS, SLOTS, type SlotIndex } from '../src/index.ts';
+import { type RngHolder, randomInt } from '../src/rng.ts';
 import type { EquipmentPlay, GameEvent, GameState, Plan, PlayerState, SpecialPlay } from '../src/types.ts';
 import { newGame } from './helpers.ts';
 
@@ -15,7 +15,11 @@ function randomPlan(rng: RngHolder, state: GameState, player: PlayerState, scout
   const card = pick(rng, player.equipment);
   let equipment: EquipmentPlay;
   if (card === 'double-griffe') equipment = { card, slots: [slot(rng), slot(rng)] };
-  else if (card === 'envoutement') equipment = { card, targetPlayerId: pick(rng, others), slot: slot(rng) };
+  else if (card === 'envoutement')
+    equipment =
+      state.cardSet === 'classiques'
+        ? { card, targetPlayerId: pick(rng, others), slot: slot(rng) }
+        : { card, slot: slot(rng) };
   else equipment = { card, slot: slot(rng) };
 
   let special: SpecialPlay | undefined;
@@ -24,7 +28,8 @@ function randomPlan(rng: RngHolder, state: GameState, player: PlayerState, scout
     const s = pick(rng, playable);
     if (s === 'sceau-annulation') special = { card: s, targetPlayerId: pick(rng, others) };
     else if (s === 'filet-magique') special = { card: s, slot: slot(rng) };
-    else if (s === 'marque-du-chasseur') special = card === 'envoutement' ? undefined : { card: s };
+    else if (s === 'marque-du-chasseur' || s === 'poing-infernal')
+      special = card === 'envoutement' ? undefined : { card: s };
     else special = { card: s };
   }
 
@@ -44,15 +49,15 @@ function checkInvariants(state: GameState, markPoints: number): void {
   for (const p of state.players) expect(p.equipment.filter((c) => c === 'lame-du-chasseur')).toHaveLength(1);
 
   const heldSpecials = state.players.flatMap((p) => p.specials);
-  expect(heldSpecials.length + state.specialDeck.length + state.specialDiscard.length).toBe(14);
+  expect(heldSpecials.length + state.specialDeck.length + state.specialDiscard.length).toBe(16);
 
   const totalScore = state.sides.reduce((sum, s) => sum + s.score, 0);
   const defeatedHp = state.defeatedMonsters.reduce((sum, id) => sum + MONSTERS[id].hp, 0);
   expect(totalScore).toBe(defeatedHp + markPoints);
 }
 
-function playRandomGame(seed: number, playerCount: number, teams?: (string | undefined)[]) {
-  let state = newGame(playerCount, { seed, ...(teams ? { teams } : {}) });
+function playRandomGame(seed: number, playerCount: number, cardSet: CardSet, teams?: (string | undefined)[]) {
+  let state = newGame(playerCount, { seed, cardSet, ...(teams ? { teams } : {}) });
   const rng: RngHolder = { rng: seed * 7919 };
   const allEvents: GameEvent[] = [];
   let markPoints = 0;
@@ -85,10 +90,10 @@ function playRandomGame(seed: number, playerCount: number, teams?: (string | und
   return { state, events: allEvents, actions };
 }
 
-describe('parties simulées', () => {
-  it.each([3, 4, 5])('%i joueurs solo : 30 parties vont jusqu’au bout en respectant les règles', (players) => {
-    for (let seed = 1; seed <= 30; seed++) {
-      const { state, events } = playRandomGame(seed, players);
+describe.each(CARD_SETS)('parties simulées (cartes %s)', (cardSet) => {
+  it.each([3, 4, 5])('%i joueurs solo : 20 parties vont jusqu’au bout en respectant les règles', (players) => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const { state, events } = playRandomGame(seed, players, cardSet);
       expect(state.phase).toBe('gameOver');
       expect(state.defeatedMonsters).toContain('la-faucheuse');
       expect(state.result!.winners.length).toBeGreaterThan(0);
@@ -96,27 +101,27 @@ describe('parties simulées', () => {
     }
   });
 
-  it('6 à 12 joueurs avec équipes : 30 parties vont jusqu’au bout', () => {
-    for (let seed = 1; seed <= 30; seed++) {
+  it('6 à 12 joueurs avec équipes : 20 parties vont jusqu’au bout', () => {
+    for (let seed = 1; seed <= 20; seed++) {
       const count = 6 + (seed % 7);
       const teams = Array.from({ length: count }, (_, i) => (i < count - 2 ? `T${Math.floor(i / 3)}` : undefined));
-      const { state } = playRandomGame(seed, count, teams);
+      const { state } = playRandomGame(seed, count, cardSet, teams);
       expect(state.phase).toBe('gameOver');
       expect(state.sides.filter((s) => s.isTeam).every((s) => s.playerIds.length <= 3)).toBe(true);
     }
   });
 
   it('rejoue exactement la même partie avec la même graine', () => {
-    const a = playRandomGame(123, 4);
-    const b = playRandomGame(123, 4);
+    const a = playRandomGame(123, 4, cardSet);
+    const b = playRandomGame(123, 4, cardSet);
     expect(b.state).toEqual(a.state);
     expect(b.events).toEqual(a.events);
   });
+});
 
-  it("ne modifie jamais l'état reçu", () => {
-    const state = newGame();
-    const snapshot = structuredClone(state);
-    apply(state, { type: 'bid', playerId: 'p1', amount: 1 });
-    expect(state).toEqual(snapshot);
-  });
+it("ne modifie jamais l'état reçu", () => {
+  const state = newGame();
+  const snapshot = structuredClone(state);
+  apply(state, { type: 'bid', playerId: 'p1', amount: 1 });
+  expect(state).toEqual(snapshot);
 });

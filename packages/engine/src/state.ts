@@ -1,14 +1,14 @@
 import type { MonsterId } from './cards.ts';
-import type { MonsterInPlay, PlayerId, PlayerState, RoundState, SideId, SideState, GameState } from './types.ts';
+import type { GameState, MonsterInPlay, PlayerId, PlayerState, RoundState, SideId, SideState } from './types.ts';
 
 /** Action refusée par les règles. Interceptée par `apply`, qui la transforme en `{ ok: false }`. */
 export class GameRuleError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-  ) {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
     super(message);
     this.name = 'GameRuleError';
+    this.code = code;
   }
 }
 
@@ -38,7 +38,7 @@ export function allMonstersDefeated(state: GameState): boolean {
 }
 
 export function freshMonster(id: MonsterId): MonsterInPlay {
-  return { id, damage: 0, frozen: false, poisons: [], netOwnerId: null };
+  return { id, damage: 0, frozen: false, poisons: [], netOwnerId: null, protectedBy: null };
 }
 
 export function emptyRound(number: number): RoundState {

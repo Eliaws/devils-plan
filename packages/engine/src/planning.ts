@@ -1,4 +1,5 @@
-import { MONSTERS, SLOTS, isDamagingEquipment, type SlotIndex } from './cards.ts';
+import { isAttackEquipment, MONSTERS, SLOTS, type SlotIndex, SPECIALS } from './cards.ts';
+import { clone } from './clone.ts';
 import { shuffle } from './rng.ts';
 import { GameRuleError, getPlayer, removeOne } from './state.ts';
 import type { GameEvent, GameState, Plan, PlayerId, ScoutEntry } from './types.ts';
@@ -48,7 +49,10 @@ export function placeBid(state: GameState, playerId: PlayerId, amount: number, e
 /** Mise la plus haute en premier, égalités tirées au sort. Tous paient leur mise. */
 function revealBids(state: GameState, events: GameEvent[]): void {
   const { bids } = state.round;
-  const order = shuffle(state, state.players.map((p) => p.id)).sort((a, b) => bids[b]! - bids[a]!);
+  const order = shuffle(
+    state,
+    state.players.map((p) => p.id),
+  ).sort((a, b) => bids[b]! - bids[a]!);
   for (const player of state.players) player.coins -= bids[player.id]!;
 
   state.round.revealedBids = { ...bids };
@@ -90,7 +94,7 @@ export function scout(state: GameState, playerId: PlayerId, events: GameEvent[])
 export function submitPlan(state: GameState, playerId: PlayerId, plan: Plan, events: GameEvent[]): boolean {
   requirePhase(state, 'planning');
   validatePlan(state, playerId, plan);
-  state.round.plans[playerId] = structuredClone(plan);
+  state.round.plans[playerId] = clone(plan);
   events.push({ type: 'planSubmitted', playerId });
   return state.players.every((p) => state.round.plans[p.id] !== undefined);
 }
@@ -113,7 +117,13 @@ export function validatePlan(state: GameState, playerId: PlayerId, plan: Plan): 
     } else {
       requireSlot(equipment.slot);
     }
-    if (equipment.card === 'envoutement') requireOtherPlayer(state, playerId, equipment.targetPlayerId);
+    // Version classique : l'Envoûtement détourne l'attaque d'un autre joueur.
+    if (equipment.card === 'envoutement' && state.cardSet === 'classiques') {
+      if (equipment.targetPlayerId === undefined) {
+        throw new GameRuleError('INVALID_TARGET', "L'Envoûtement doit viser un autre joueur.");
+      }
+      requireOtherPlayer(state, playerId, equipment.targetPlayerId);
+    }
   }
 
   if (special) {
@@ -121,20 +131,23 @@ export function validatePlan(state: GameState, playerId: PlayerId, plan: Plan): 
       throw new GameRuleError('INVALID_CARD', "L'éclaireur se joue directement pendant la planification.");
     }
     if (scouted) {
-      throw new GameRuleError('SPECIAL_ALREADY_USED', 'Vous avez déjà joué L\'éclaireur cette manche.');
+      throw new GameRuleError('SPECIAL_ALREADY_USED', "Vous avez déjà joué L'éclaireur cette manche.");
     }
     if (!player.specials.includes(special.card)) {
       throw new GameRuleError('CARD_NOT_IN_HAND', `Vous n'avez pas la carte ${special.card}.`);
     }
     if (special.card === 'sceau-annulation') requireOtherPlayer(state, playerId, special.targetPlayerId);
     if (special.card === 'filet-magique') requireSlot(special.slot);
-    if (special.card === 'marque-du-chasseur' && !(equipment && isDamagingEquipment(equipment.card))) {
-      throw new GameRuleError('MARK_NEEDS_ATTACK', 'La Marque du chasseur se joue avec une attaque.');
+    if (
+      (special.card === 'marque-du-chasseur' || special.card === 'poing-infernal') &&
+      !(equipment && isAttackEquipment(equipment.card))
+    ) {
+      throw new GameRuleError('NEEDS_ATTACK', `${SPECIALS[special.card].name} se joue avec une attaque.`);
     }
   }
 
   requireCount(plan.boost, player.coins, 'Boost');
-  if (plan.boost > 0 && !(equipment && isDamagingEquipment(equipment.card))) {
-    throw new GameRuleError('BOOST_NEEDS_ATTACK', 'Le boost ne s\'applique qu\'à un Équipement qui inflige des dégâts.');
+  if (plan.boost > 0 && !(equipment && isAttackEquipment(equipment.card))) {
+    throw new GameRuleError('BOOST_NEEDS_ATTACK', "Le boost ne s'applique qu'à un Équipement qui inflige des dégâts.");
   }
 }

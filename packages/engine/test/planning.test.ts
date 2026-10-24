@@ -30,7 +30,7 @@ describe('mises et ordre de passage', () => {
     let state = newGame();
     state = act(state, { type: 'bid', playerId: 'p1', amount: 1 }).state;
     state = act(state, { type: 'bid', playerId: 'p1', amount: 0 }).state;
-    expect(state.round.bids['p1']).toBe(0);
+    expect(state.round.bids.p1).toBe(0);
   });
 
   it('refuse les mises invalides', () => {
@@ -52,7 +52,7 @@ describe('planification', () => {
     state = act(state, { type: 'plan', playerId: 'p1', plan: lame(1) }).state;
     state = act(state, { type: 'plan', playerId: 'p2', plan: lame(0) }).state;
     expect(state.phase).toBe('planning');
-    expect(state.round.plans['p1']).toEqual(lame(1));
+    expect(state.round.plans.p1).toEqual(lame(1));
     const { state: after } = act(state, { type: 'plan', playerId: 'p3', plan: lame(0) });
     expect(after.round.number).toBe(2);
     expect(after.phase).toBe('bidding');
@@ -80,18 +80,26 @@ describe('planification', () => {
     expectRejected(
       state,
       { type: 'plan', playerId: 'p1', plan: { special: { card: 'marque-du-chasseur' }, boost: 0 } },
-      'MARK_NEEDS_ATTACK',
+      'NEEDS_ATTACK',
     );
     expectRejected(
       state,
       {
         type: 'plan',
         playerId: 'p1',
-        plan: { equipment: { card: 'envoutement', targetPlayerId: 'p2', slot: 0 }, special: { card: 'marque-du-chasseur' }, boost: 0 },
+        plan: {
+          equipment: { card: 'envoutement', targetPlayerId: 'p2', slot: 0 },
+          special: { card: 'marque-du-chasseur' },
+          boost: 0,
+        },
       },
-      'MARK_NEEDS_ATTACK',
+      'NEEDS_ATTACK',
     );
-    expectRejected(state, { type: 'plan', playerId: 'p1', plan: { special: { card: 'eclaireur' } as never, boost: 0 } }, 'INVALID_CARD');
+    expectRejected(
+      state,
+      { type: 'plan', playerId: 'p1', plan: { special: { card: 'eclaireur' } as never, boost: 0 } },
+      'INVALID_CARD',
+    );
   });
 });
 
@@ -112,16 +120,26 @@ describe("L'éclaireur", () => {
     expect(after.specialDiscard).toEqual(['eclaireur']);
 
     expectRejected(after, { type: 'scout', playerId: 'p1' }, 'SPECIAL_ALREADY_USED');
-    expectRejected(after, { type: 'plan', playerId: 'p1', plan: { ...lame(0), special: { card: 'vague-de-choc' } } }, 'SPECIAL_ALREADY_USED');
+    expectRejected(
+      after,
+      { type: 'plan', playerId: 'p1', plan: { ...lame(0), special: { card: 'vague-de-choc' } } },
+      'SPECIAL_ALREADY_USED',
+    );
     // Après L'éclaireur, un plan sans carte est accepté.
-    expect(act(after, { type: 'plan', playerId: 'p1', plan: { boost: 0 } }).state.round.plans['p1']).toEqual({ boost: 0 });
+    expect(act(after, { type: 'plan', playerId: 'p1', plan: { boost: 0 } }).state.round.plans.p1).toEqual({
+      boost: 0,
+    });
   });
 
   it('est refusé sans la carte ou si le plan contient déjà une Spéciale', () => {
     const state = biddingInOrder(newGame(), ['p1', 'p2', 'p3']).state;
     expectRejected(state, { type: 'scout', playerId: 'p1' }, 'CARD_NOT_IN_HAND');
     give(state, 'p2', { specials: ['eclaireur', 'vague-de-choc'] });
-    const planned = act(state, { type: 'plan', playerId: 'p2', plan: { special: { card: 'vague-de-choc' }, boost: 0 } }).state;
+    const planned = act(state, {
+      type: 'plan',
+      playerId: 'p2',
+      plan: { special: { card: 'vague-de-choc' }, boost: 0 },
+    }).state;
     expectRejected(planned, { type: 'scout', playerId: 'p2' }, 'SPECIAL_ALREADY_USED');
   });
 });

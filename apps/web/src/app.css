@@ -1,0 +1,87 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/* Thème sombre unique : peu de couleurs, chacune a un sens. */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: #0a0b0f;
+  --color-surface: #12141a;
+  --color-raised: #1a1d25;
+  --color-line: #272b36;
+  --color-ink: #ecebe7;
+  --color-muted: #8d919e;
+  --color-faint: #5b5f6b;
+
+  /* Action principale, pièces */
+  --color-gold: #e0a64b;
+  --color-gold-ink: #1b1306;
+  /* Dégâts, mort */
+  --color-blood: #e5484d;
+  /* Protection / glace */
+  --color-ice: #5eb1ef;
+  /* Poison */
+  --color-venom: #4cc38a;
+  /* Cartes Spéciales, magie */
+  --color-arcane: #a87ff0;
+
+  --animate-shake: shake 0.4s ease-in-out;
+
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-4px) rotate(-1deg);
+    }
+    75% {
+      transform: translateX(4px) rotate(1deg);
+    }
+  }
+}
+
+@layer base {
+  html {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100dvh;
+    font-feature-settings: "cv11", "ss01";
+    overscroll-behavior-y: none;
+  }
+
+  /* 16 px minimum : évite le zoom automatique d'iOS sur les champs. */
+  input {
+    font-size: max(16px, 1rem);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+  }
+
+  button {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+}
+
+@utility pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@utility pt-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

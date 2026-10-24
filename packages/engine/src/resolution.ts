@@ -1,13 +1,15 @@
-import { EQUIPMENT, PERMANENT_EQUIPMENT, SLOTS, SPECIALS, type SlotIndex } from './cards.ts';
-import { dealDamage, type HitOutcome } from './combat.ts';
-import { allMonstersDefeated, getPlayer, removeOne, sideOfPlayer } from './state.ts';
-import type { EquipmentPlay, GameEvent, GameState, Plan, PlayerId } from './types.ts';
+import { PERMANENT_EQUIPMENT, SLOTS, type SlotIndex, SPECIALS } from './cards.ts';
+import { awardHunterMark, dealDamage } from './combat.ts';
+import { resolveClassicEquipment } from './effects/classic.ts';
+import { resolvePrintedEquipment, triggerPendingEffects } from './effects/printed.ts';
+import { allMonstersDefeated, getPlayer, removeOne } from './state.ts';
+import type { GameEvent, GameState, Plan, PlayerId } from './types.ts';
 
 /** Effets posés au début de la résolution, valables pour cette manche seulement. */
 interface ResolutionContext {
   shielded: Set<PlayerId>;
   cancelled: Set<PlayerId>;
-  /** Joueurs envoûtés : leur attaque frappe cet emplacement. */
+  /** Joueurs envoûtés (version classique) : leur attaque frappe cet emplacement. */
   redirects: Map<PlayerId, SlotIndex>;
 }
 
@@ -17,8 +19,8 @@ interface ResolutionContext {
  * 2. Boucliers levés ;
  * 3. Sceaux d'annulation (ordre de passage) ;
  * 4. Échanges macabres (ordre de passage) ;
- * 5. Envoûtements (nouvel ordre de passage) ;
- * 6. actions, une par une, dans l'ordre de passage final.
+ * 5. Envoûtements, version classique (nouvel ordre de passage) ;
+ * 6. pour chaque joueur, dans l'ordre de passage final : ses effets différés, puis son action.
  */
 export function resolveRound(state: GameState, events: GameEvent[]): void {
   const { plans } = state.round;
@@ -58,18 +60,23 @@ export function resolveRound(state: GameState, events: GameEvent[]): void {
   }
   state.round.order = order;
 
-  for (const id of order) {
-    const equipment = planOf(id).equipment;
-    if (ctx.cancelled.has(id) || equipment?.card !== 'envoutement') continue;
-    if (reachesTarget(ctx, id, equipment.targetPlayerId, 'envoutement', events)) {
-      ctx.redirects.set(equipment.targetPlayerId, equipment.slot);
-      events.push({ type: 'enchanted', playerId: id, targetPlayerId: equipment.targetPlayerId, slot: equipment.slot });
+  if (state.cardSet === 'classiques') {
+    for (const id of order) {
+      const equipment = planOf(id).equipment;
+      if (ctx.cancelled.has(id) || equipment?.card !== 'envoutement') continue;
+      const targetId = equipment.targetPlayerId;
+      if (targetId !== undefined && reachesTarget(ctx, id, targetId, 'envoutement', events)) {
+        ctx.redirects.set(targetId, equipment.slot);
+        events.push({ type: 'enchanted', playerId: id, targetPlayerId: targetId, slot: equipment.slot });
+      }
     }
   }
 
   for (const id of order) {
     if (allMonstersDefeated(state)) return;
-    if (ctx.cancelled.has(id)) continue;
+    // Les effets différés se déclenchent même si l'action de cette manche est annulée.
+    triggerPendingEffects(state, id, events);
+    if (allMonstersDefeated(state) || ctx.cancelled.has(id)) continue;
     resolveAction(state, id, planOf(id), ctx.redirects.get(id) ?? null, events);
   }
 }
@@ -123,89 +130,19 @@ function resolveAction(
   }
 
   if (equipment) {
-    const firstHit = resolveEquipment(state, playerId, equipment, plan.boost, redirect, events);
-    if (special?.card === 'marque-du-chasseur' && firstHit?.monsterId) {
-      const side = sideOfPlayer(state, playerId);
-      const points = SPECIALS['marque-du-chasseur'].points;
-      side.score += points;
-      events.push({ type: 'hunterMarked', playerId, sideId: side.id, points });
-    }
+    const bonus = plan.boost + (special?.card === 'poing-infernal' ? SPECIALS['poing-infernal'].bonus : 0);
+    const marked = special?.card === 'marque-du-chasseur';
+    const firstHit =
+      state.cardSet === 'imprimees'
+        ? resolvePrintedEquipment(state, playerId, equipment, bonus, marked, events)
+        : resolveClassicEquipment(state, playerId, equipment, bonus, redirect, events);
+    if (marked && firstHit?.monsterId) awardHunterMark(state, playerId, events);
   }
 
   if (special?.card === 'vague-de-choc') {
     for (const slot of SLOTS) {
       if (allMonstersDefeated(state)) return;
       dealDamage(state, slot, SPECIALS['vague-de-choc'].damage, playerId, 'vague-de-choc', false, events);
-    }
-  }
-}
-
-/** Renvoie le résultat du premier coup (null pour l'Envoûtement, qui n'attaque pas). */
-function resolveEquipment(
-  state: GameState,
-  playerId: PlayerId,
-  play: EquipmentPlay,
-  boost: number,
-  redirect: SlotIndex | null,
-  events: GameEvent[],
-): HitOutcome | null {
-  const strike = (slot: SlotIndex, amount: number) =>
-    dealDamage(state, redirect ?? slot, amount, playerId, play.card, true, events);
-
-  switch (play.card) {
-    case 'envoutement':
-      // Appliqué au début de la résolution.
-      return null;
-
-    case 'lame-du-chasseur':
-    case 'charge-abomination':
-      return strike(play.slot, EQUIPMENT[play.card].damage + boost);
-
-    case 'morsure': {
-      const hit = strike(play.slot, EQUIPMENT.morsure.damage + boost);
-      const amount = EQUIPMENT.morsure.coins;
-      getPlayer(state, playerId).coins += amount;
-      events.push({ type: 'coinGained', playerId, amount });
-      return hit;
-    }
-
-    case 'souffle-de-glace': {
-      const slot = redirect ?? play.slot;
-      const hit = strike(play.slot, EQUIPMENT['souffle-de-glace'].damage + boost);
-      const monster = state.board[slot];
-      if (hit.monsterId && !hit.killed && monster) {
-        monster.frozen = true;
-        events.push({ type: 'monsterFrozen', slot, monsterId: monster.id });
-      }
-      return hit;
-    }
-
-    case 'poison': {
-      const slot = redirect ?? play.slot;
-      const hit = strike(play.slot, EQUIPMENT.poison.immediate + boost);
-      const monster = state.board[slot];
-      if (hit.monsterId && !hit.killed && monster) {
-        monster.poisons.push({ ownerId: playerId, ticksLeft: EQUIPMENT.poison.rounds });
-        events.push({ type: 'monsterPoisoned', playerId, slot, monsterId: monster.id });
-      }
-      return hit;
-    }
-
-    case 'citrouille-explosive': {
-      const slot = redirect ?? play.slot;
-      const hit = strike(play.slot, EQUIPMENT['citrouille-explosive'].damage + boost);
-      for (const neighbor of [slot - 1, slot + 1]) {
-        if (!SLOTS.includes(neighbor as SlotIndex) || allMonstersDefeated(state)) continue;
-        dealDamage(state, neighbor as SlotIndex, EQUIPMENT['citrouille-explosive'].splash, playerId, 'citrouille-eclats', false, events);
-      }
-      return hit;
-    }
-
-    case 'double-griffe': {
-      const [first, second] = play.slots;
-      const hit = strike(first, EQUIPMENT['double-griffe'].damagePerHit + boost);
-      if (!allMonstersDefeated(state)) strike(second, EQUIPMENT['double-griffe'].damagePerHit);
-      return hit;
     }
   }
 }

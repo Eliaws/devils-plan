@@ -6,11 +6,15 @@ const ORDER = ['p1', 'p2', 'p3'];
 const BIG = ['golem', 'golem', 'golem'] as const;
 
 /** Joue une manche où p1 utilise `plan` et les autres attaquent l'emplacement 2 (sauf indication contraire). */
-function p1Plays(plan: Plan, setup?: (s: ReturnType<typeof newGame>) => void, others: Partial<Record<string, Plan>> = {}) {
+function p1Plays(
+  plan: Plan,
+  setup?: (s: ReturnType<typeof newGame>) => void,
+  others: Partial<Record<string, Plan>> = {},
+) {
   const state = newGame();
   setBoard(state, [...BIG], ['momie']);
   setup?.(state);
-  return playRound(state, ORDER, { p1: plan, p2: others['p2'] ?? lame(2), p3: others['p3'] ?? lame(2) });
+  return playRound(state, ORDER, { p1: plan, p2: others.p2 ?? lame(2), p3: others.p3 ?? lame(2) });
 }
 
 describe('cartes Équipement', () => {
@@ -33,11 +37,13 @@ describe('cartes Équipement', () => {
   });
 
   it('Poison : 1 dégât, puis 2 dégâts au début des 2 manches suivantes, puis s’arrête', () => {
-    let { state } = p1Plays({ equipment: { card: 'poison', slot: 0 }, boost: 0 }, (s) => give(s, 'p1', { equipment: ['poison'] }));
+    let { state } = p1Plays({ equipment: { card: 'poison', slot: 0 }, boost: 0 }, (s) =>
+      give(s, 'p1', { equipment: ['poison'] }),
+    );
     // Manche 2 déjà commencée : 1 + 2.
     expect(damageAt(state, 0)).toBe(3);
-    expect(state.board[0]!.poisons).toEqual([{ ownerId: 'p1', ticksLeft: 1 }]);
-    expect(state.round.damage['p1']).toBe(2);
+    expect(state.board[0]!.poisons).toEqual([{ ownerId: 'p1', amount: 2, ticksLeft: 1 }]);
+    expect(state.round.damage.p1).toBe(2);
 
     state = playRound(state, ORDER, { p1: lame(1), p2: lame(2), p3: lame(2) }).state;
     expect(damageAt(state, 0)).toBe(5);
@@ -94,7 +100,9 @@ describe('cartes Équipement', () => {
   });
 
   it('Morsure : 3 dégâts et +1 pièce', () => {
-    const { state } = p1Plays({ equipment: { card: 'morsure', slot: 0 }, boost: 0 }, (s) => give(s, 'p1', { equipment: ['morsure'] }));
+    const { state } = p1Plays({ equipment: { card: 'morsure', slot: 0 }, boost: 0 }, (s) =>
+      give(s, 'p1', { equipment: ['morsure'] }),
+    );
     expect(damageAt(state, 0)).toBe(3);
     // 1 pièce de départ + 1 morsure + 1 de la nouvelle manche.
     expect(state.players[0]!.coins).toBe(3);
@@ -126,7 +134,9 @@ describe('cartes Spéciales', () => {
     expect(state.players[1]!.equipment).toEqual(['lame-du-chasseur']);
     // 1 + 1 donnée - 1 de boost payé + 1 de la nouvelle manche.
     expect(state.players[1]!.coins).toBe(2);
-    expect(eventsOfType(events, 'actionCancelled')).toEqual([{ type: 'actionCancelled', playerId: 'p2', byPlayerId: 'p1' }]);
+    expect(eventsOfType(events, 'actionCancelled')).toEqual([
+      { type: 'actionCancelled', playerId: 'p2', byPlayerId: 'p1' },
+    ]);
   });
 
   it("Sceau d'annulation : un joueur annulé avant son tour ne peut plus annuler", () => {
@@ -165,7 +175,11 @@ describe('cartes Spéciales', () => {
     setBoard(state, [...BIG]);
     give(state, 'p3', { specials: ['bouclier-du-heros'] });
     give(state, 'p1', { specials: ['sceau-annulation'] });
-    state = playRound(state, ORDER, { p1: lame(0), p2: lame(0), p3: { ...lame(2), special: { card: 'bouclier-du-heros' } } }).state;
+    state = playRound(state, ORDER, {
+      p1: lame(0),
+      p2: lame(0),
+      p3: { ...lame(2), special: { card: 'bouclier-du-heros' } },
+    }).state;
     const { events } = playRound(state, ORDER, {
       p1: { ...lame(0), special: { card: 'sceau-annulation', targetPlayerId: 'p3' } },
       p2: lame(0),

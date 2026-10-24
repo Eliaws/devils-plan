@@ -5,6 +5,16 @@ export const SLOT_COUNT = 3;
 export type SlotIndex = 0 | 1 | 2;
 export const SLOTS: readonly SlotIndex[] = [0, 1, 2];
 
+// --- Versions des cartes ---------------------------------------------------
+
+/**
+ * `imprimees` : effets écrits sur les illustrations des cartes.
+ * `classiques` : première version des règles, validée avant les illustrations.
+ */
+export const CARD_SETS = ['imprimees', 'classiques'] as const;
+export type CardSet = (typeof CARD_SETS)[number];
+export const DEFAULT_CARD_SET: CardSet = 'imprimees';
+
 // --- Équipements -----------------------------------------------------------
 
 export const EQUIPMENT_IDS = [
@@ -19,22 +29,52 @@ export const EQUIPMENT_IDS = [
 ] as const;
 export type EquipmentId = (typeof EQUIPMENT_IDS)[number];
 
-export const EQUIPMENT = {
-  'lame-du-chasseur': { name: 'Lame du chasseur', damage: 2 },
-  'double-griffe': { name: 'Double griffe', hits: 2, damagePerHit: 2 },
-  poison: { name: 'Poison', immediate: 1, perRound: 2, rounds: 2 },
-  'souffle-de-glace': { name: 'Souffle de glace', damage: 3, freezeBonus: 2 },
-  'citrouille-explosive': { name: 'Citrouille explosive', damage: 3, splash: 1 },
-  'charge-abomination': { name: "Charge de l'abomination", damage: 6 },
-  envoutement: { name: 'Envoûtement' },
-  morsure: { name: 'Morsure', damage: 3, coins: 1 },
-} as const satisfies Record<EquipmentId, { name: string; [stat: string]: string | number }>;
+export const EQUIPMENT_NAMES: Record<EquipmentId, string> = {
+  'lame-du-chasseur': 'Lame du chasseur',
+  'double-griffe': 'Double griffe',
+  poison: 'Poison',
+  'souffle-de-glace': 'Souffle de glace',
+  'citrouille-explosive': 'Citrouille explosive',
+  'charge-abomination': "Charge de l'abomination",
+  envoutement: 'Envoûtement',
+  morsure: 'Morsure',
+};
+
+/** Effets de la version « cartes imprimées ». */
+export const PRINTED_EQUIPMENT = {
+  'lame-du-chasseur': { damage: 3 },
+  /** 4 dégâts sur une seule cible, ou 2 dégâts sur deux cibles différentes. */
+  'double-griffe': { singleTarget: 4, perTarget: 2 },
+  /** 1 dégât immédiat, puis 1 au début de chaque manche jusqu'à la mort du monstre. */
+  poison: { immediate: 1, perRound: 1 },
+  /** Le monstre est protégé des autres joueurs jusqu'à la prochaine action du lanceur. */
+  'souffle-de-glace': { damage: 3 },
+  'citrouille-explosive': { damage: 5 },
+  /** Dégâts infligés à la prochaine action du joueur (manche suivante). */
+  'charge-abomination': { damage: 8 },
+  /** Si le monstre est encore vivant à la prochaine action du joueur, il meurt. */
+  envoutement: {},
+  /** 2 dégâts ; à la prochaine action du joueur, 2 de plus au monstre et 2 à son voisin de gauche. */
+  morsure: { damage: 2, followUp: 2, leftFollowUp: 2 },
+} as const satisfies Record<EquipmentId, Record<string, number>>;
+
+/** Effets de la version « classiques ». */
+export const CLASSIC_EQUIPMENT = {
+  'lame-du-chasseur': { damage: 2 },
+  'double-griffe': { hits: 2, damagePerHit: 2 },
+  poison: { immediate: 1, perRound: 2, rounds: 2 },
+  'souffle-de-glace': { damage: 3, freezeBonus: 2 },
+  'citrouille-explosive': { damage: 3, splash: 1 },
+  'charge-abomination': { damage: 6 },
+  envoutement: {},
+  morsure: { damage: 3, coins: 1 },
+} as const satisfies Record<EquipmentId, Record<string, number>>;
 
 /** La Lame du chasseur revient toujours en main après usage. */
 export const PERMANENT_EQUIPMENT: EquipmentId = 'lame-du-chasseur';
 
-/** Équipements qui infligent des dégâts directs (boost et Marque du chasseur possibles). */
-export function isDamagingEquipment(card: EquipmentId): boolean {
+/** Équipements qui attaquent (boost, Marque du chasseur et Poing infernal possibles). */
+export function isAttackEquipment(card: EquipmentId): boolean {
   return card !== 'envoutement';
 }
 
@@ -48,6 +88,7 @@ export const SPECIAL_IDS = [
   'sceau-annulation',
   'marque-du-chasseur',
   'filet-magique',
+  'poing-infernal',
 ] as const;
 export type SpecialId = (typeof SPECIAL_IDS)[number];
 
@@ -59,6 +100,7 @@ export const SPECIALS = {
   'sceau-annulation': { name: "Le sceau d'annulation" },
   'marque-du-chasseur': { name: 'Marque du chasseur', points: 3 },
   'filet-magique': { name: 'Le filet magique' },
+  'poing-infernal': { name: 'Le Poing infernal', bonus: 2 },
 } as const satisfies Record<SpecialId, { name: string; [stat: string]: string | number }>;
 
 export const SPECIAL_COPIES = 2;

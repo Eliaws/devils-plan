@@ -4,6 +4,12 @@ Ce document complète le livret (`regles_chasseurs_de_lombre.pdf`) : il fixe tou
 
 Légende : ✅ = tranché ensemble · 🔧 = décision de détail prise pour rendre la règle applicable (à relire, facile à changer).
 
+**Deux versions des cartes** ✅, au choix de l'hôte dans le lobby :
+- **Cartes imprimées** (par défaut) : les effets écrits sur les illustrations des Équipements (§4 bis) ;
+- **Version d'origine** : les valeurs fixées avant les illustrations (§4).
+
+Tout le reste du document s'applique aux deux versions.
+
 ## 1. Mise en place
 
 - Pioche Monstres : les 12 monstres mélangés, **La Faucheuse au fond**. Les 3 premiers sont révélés sur 3 emplacements (gauche, centre, droite).
@@ -19,7 +25,7 @@ Légende : ✅ = tranché ensemble · 🔧 = décision de détail prise pour ren
   | Morsure | 2 | Vampire, Zombie |
   | Envoûtement | 1 | Sirène |
 
-- **Pioche Spéciale** ✅ : 7 cartes × 2 exemplaires = 14 cartes, mélangées. Le filet magique en fait partie.
+- **Pioche Spéciale** ✅ : 8 cartes × 2 exemplaires = 16 cartes, mélangées. Le filet magique et le Poing infernal en font partie.
 - Chaque joueur reçoit 1 **Lame du chasseur** et 0 pièce.
 
 ## 2. Déroulement d'une manche
@@ -41,8 +47,8 @@ Une manche = **une action par joueur** ✅.
    2. les Boucliers du héros se lèvent ;
    3. les Sceaux d'annulation s'appliquent, dans l'ordre de passage : un joueur annulé avant d'avoir appliqué son propre Sceau ne peut plus annuler personne ;
    4. les Échanges macabres s'appliquent, dans l'ordre de passage ;
-   5. les Envoûtements s'appliquent, dans le nouvel ordre de passage ;
-   6. les actions sont résolues une par une. Dans une action : Filet magique, puis Équipement (et Marque du chasseur), puis Vague de choc.
+   5. les Envoûtements s'appliquent, dans le nouvel ordre de passage (version d'origine) ;
+   6. pour chaque joueur, dans l'ordre de passage : ses effets différés de la manche précédente (cartes imprimées, §4 bis), puis son action. Dans une action : Filet magique, puis Équipement (et Marque du chasseur), puis Vague de choc.
 5. **Fin de manche** : attribution de la carte Spéciale (§5).
 
 La partie s'arrête dès que **tous les monstres sont morts** (pioche et plateau vides), même en cours de manche : les actions restantes sont perdues 🔧.
@@ -57,7 +63,7 @@ La partie s'arrête dès que **tous les monstres sont morts** (pioche et plateau
 - **Coup fatal** : son auteur gagne les PV du monstre et les Équipements indiqués sur la carte du monstre (pris dans la réserve). Cela vaut pour tout dégât, y compris de zone ou de poison ✅ : les dégâts sont toujours attribués à leur auteur.
 - Les Équipements utilisés vont à la défausse et ne reviennent jamais en jeu. La Lame du chasseur revient toujours en main.
 
-## 4. Cartes Équipement ✅
+## 4. Cartes Équipement, version d'origine ✅
 
 Le **boost** (+1 dégât par pièce) s'applique **une seule fois par action** : au premier coup de Double griffe, à la cible principale de la Citrouille 🔧. Les pièces de boost sont dépensées même si l'attaque est annulée 🔧.
 
@@ -71,6 +77,25 @@ Le **boost** (+1 dégât par pièce) s'applique **une seule fois par action** : 
 | **Charge de l'abomination** | 6 dégâts sur une cible. |
 | **Envoûtement** | Choisissez un autre joueur : son action de cette manche frappe l'emplacement de votre choix. Appliqué au début de la résolution. Si plusieurs Envoûtements visent le même joueur, le dernier dans l'ordre de passage l'emporte 🔧. |
 | **Morsure** | 3 dégâts, et vous gagnez 1 pièce. |
+
+## 4 bis. Cartes Équipement, cartes imprimées ✅
+
+Le boost et le Poing infernal s'appliquent une seule fois par action, au premier coup 🔧.
+
+« Au prochain tour du joueur » ✅ = **juste avant son action à la manche suivante**, à sa place dans l'ordre de passage. Ces effets différés se déclenchent même si l'action de cette manche-là est annulée par un Sceau 🔧.
+
+| Carte | Effet |
+|---|---|
+| **Lame du chasseur** | 3 dégâts. Revient toujours en main. |
+| **Double griffe** | 4 dégâts si les deux coups visent le même emplacement (un seul coup), sinon 2 dégâts sur chacun des deux emplacements. |
+| **Poison** | 1 dégât immédiat 🔧, puis 1 dégât au début de chaque manche **jusqu'à la mort du monstre**. Le coup fatal compte pour l'empoisonneur. |
+| **Souffle de glace** | 3 dégâts. Le monstre est **protégé de tout dégât venant des autres joueurs** ✅ (attaques, Vague de choc, Poison, Morsure…) jusqu'à la prochaine action du lanceur. |
+| **Citrouille explosive** | 5 dégâts sur la cible. |
+| **Charge de l'abomination** | 8 dégâts **au prochain tour du joueur**, sur l'emplacement visé (si le monstre est mort entre-temps, son remplaçant est touché 🔧). |
+| **Envoûtement** | Cible un monstre. S'il est encore vivant au prochain tour du joueur, il meurt : le joueur marque ses PV et récupère ses Équipements 🔧. Sans effet si le monstre est tué avant, ou s'il est protégé par le Souffle de glace d'un autre joueur 🔧. |
+| **Morsure** | 2 dégâts. Au prochain tour du joueur, 2 dégâts de plus au même monstre et 2 au monstre situé **à sa gauche** (aucun s'il est à gauche du plateau 🔧). Sans suite si le monstre est mort entre-temps 🔧. |
+
+Le Bouclier du héros ne bloque alors que le Sceau d'annulation, puisque l'Envoûtement ne vise plus un joueur.
 
 ## 5. Cartes Spéciales
 
@@ -91,6 +116,7 @@ Le **boost** (+1 dégât par pièce) s'applique **une seule fois par action** : 
 | **Le sceau d'annulation** | Annule l'action d'un joueur de votre choix. Ses cartes jouées sont défaussées (sauf la Lame). | **Option de partie** ✅ : « planifié » (par défaut, joué en planification sur un joueur) ou « réaction » (joué pendant la résolution, quand l'action du joueur est annoncée) |
 | **Marque du chasseur** | Se joue avec une attaque : vous gagnez 3 PV même si vous ne tuez pas le monstre (rien si l'attaque est annulée ou perdue sur un emplacement vide) 🔧. | Planification |
 | **Le filet magique** | Ciblez un emplacement : le monstre qui s'y trouve est marqué jusqu'à sa mort. Son tueur gagne les PV, mais c'est vous qui récupérez ses Équipements. Si plusieurs filets visent le même monstre, le premier posé l'emporte 🔧. | Planification |
+| **Le Poing infernal** ✅ | Se joue avec une attaque : +2 dégâts sur son premier coup. Ajouté à la pioche Spéciale (absent du livret). | Planification |
 
 ## 6. Modes de jeu
 

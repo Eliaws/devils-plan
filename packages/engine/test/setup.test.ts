@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { FINAL_MONSTER, MONSTER_IDS, createGame } from '../src/index.ts';
+import { createGame, FINAL_MONSTER, MONSTER_IDS } from '../src/index.ts';
 import { newGame } from './helpers.ts';
 
 const players = (n: number, teams: (string | undefined)[] = []) =>
-  Array.from({ length: n }, (_, i) => ({ id: `p${i + 1}`, name: `J${i + 1}`, ...(teams[i] ? { teamId: teams[i] } : {}) }));
+  Array.from({ length: n }, (_, i) => ({
+    id: `p${i + 1}`,
+    name: `J${i + 1}`,
+    ...(teams[i] ? { teamId: teams[i] } : {}),
+  }));
 
 function rejectedCode(fn: () => unknown): string | undefined {
   try {
@@ -37,7 +41,7 @@ describe('mise en place', () => {
     }
   });
 
-  it('prépare une réserve de 16 Équipements et une pioche de 14 Spéciales', () => {
+  it('prépare une réserve de 16 Équipements et une pioche de 16 Spéciales', () => {
     const state = newGame();
     const count = (list: string[], id: string) => list.filter((c) => c === id).length;
     expect(state.equipmentReserve).toHaveLength(16);
@@ -45,13 +49,20 @@ describe('mise en place', () => {
     expect(count(state.equipmentReserve, 'poison')).toBe(3);
     expect(count(state.equipmentReserve, 'envoutement')).toBe(1);
     expect(count(state.equipmentReserve, 'lame-du-chasseur')).toBe(0);
-    expect(state.specialDeck).toHaveLength(14);
+    expect(state.specialDeck).toHaveLength(16);
+    expect(count(state.specialDeck, 'poing-infernal')).toBe(2);
     expect(count(state.specialDeck, 'filet-magique')).toBe(2);
   });
 
   it('est déterministe pour une graine donnée', () => {
     expect(newGame(3, { seed: 7 })).toEqual(newGame(3, { seed: 7 }));
-    const boards = new Set([1, 2, 3, 4, 5].map((seed) => newGame(3, { seed }).board.map((m) => m!.id).join()));
+    const boards = new Set(
+      [1, 2, 3, 4, 5].map((seed) =>
+        newGame(3, { seed })
+          .board.map((m) => m!.id)
+          .join(),
+      ),
+    );
     expect(boards.size).toBeGreaterThan(1);
   });
 
@@ -69,7 +80,9 @@ describe('mise en place', () => {
     expect(rejectedCode(() => createGame({ players: players(2), seed: 1 }))).toBe('PLAYER_COUNT');
     expect(rejectedCode(() => createGame({ players: players(13), seed: 1 }))).toBe('PLAYER_COUNT');
     expect(rejectedCode(() => createGame({ players: players(5, ['A', 'A']), seed: 1 }))).toBe('TEAMS_NOT_ALLOWED');
-    expect(rejectedCode(() => createGame({ players: players(6, ['A', 'A', 'A', 'A']), seed: 1 }))).toBe('TEAM_TOO_LARGE');
+    expect(rejectedCode(() => createGame({ players: players(6, ['A', 'A', 'A', 'A']), seed: 1 }))).toBe(
+      'TEAM_TOO_LARGE',
+    );
     const dup = [...players(2), { id: 'p1', name: 'Doublon' }];
     expect(rejectedCode(() => createGame({ players: dup, seed: 1 }))).toBe('DUPLICATE_PLAYER');
   });

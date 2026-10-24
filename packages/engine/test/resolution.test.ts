@@ -108,4 +108,3 @@ describe('fin de partie', () => {
     expect(after.result!.winners).toEqual(['solo:p1', 'solo:p3']);
   });
 });
-

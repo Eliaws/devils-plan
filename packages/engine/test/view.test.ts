@@ -3,7 +3,7 @@ import { eventsFor, viewFor } from '../src/index.ts';
 import { act, biddingInOrder, give, lame, newGame, playRound, setBoard } from './helpers.ts';
 
 describe('vues filtrées (informations secrètes)', () => {
-  it("ne montre que sa propre main et celle de ses coéquipiers", () => {
+  it('ne montre que sa propre main et celle de ses coéquipiers', () => {
     const state = newGame(6, { teams: ['A', 'A', 'B', 'B', undefined, undefined] });
     give(state, 'p3', { equipment: ['poison'], specials: ['vague-de-choc'] });
     const view = viewFor(state, { kind: 'player', playerId: 'p4' });
@@ -36,7 +36,14 @@ describe('vues filtrées (informations secrètes)', () => {
 
     const view = viewFor(state, { kind: 'player', playerId: 'p2' });
     expect(view.players[0]).toMatchObject({ hasPlanned: true, plan: null });
-    expect(view.board[0]).toEqual({ id: 'golem', maxHp: 18, frozen: false, poisoned: false, netOwnerId: null });
+    expect(view.board[0]).toEqual({
+      id: 'golem',
+      maxHp: 18,
+      frozen: false,
+      poisoned: false,
+      netOwnerId: null,
+      protectedBy: null,
+    });
     expect(JSON.stringify(view)).not.toContain('"damage"');
   });
 

@@ -1,14 +1,16 @@
 import {
+  buildEquipmentReserve,
+  buildSpecialDeck,
+  CARD_SETS,
+  DEFAULT_CARD_SET,
   FINAL_MONSTER,
   MONSTER_IDS,
   PERMANENT_EQUIPMENT,
   SLOT_COUNT,
-  buildEquipmentReserve,
-  buildSpecialDeck,
 } from './cards.ts';
 import { shuffle } from './rng.ts';
 import { startRound } from './round.ts';
-import { GameRuleError, emptyRound, freshMonster } from './state.ts';
+import { emptyRound, freshMonster, GameRuleError } from './state.ts';
 import type { GameConfig, GameEvent, GameState, PlayerState, SideState } from './types.ts';
 
 export const MIN_PLAYERS = 3;
@@ -50,6 +52,7 @@ export function createGame(config: GameConfig): { state: GameState; events: Game
 
   const state: GameState = {
     rng: config.seed | 0,
+    cardSet: config.cardSet ?? DEFAULT_CARD_SET,
     phase: 'bidding',
     players,
     sides,
@@ -60,11 +63,18 @@ export function createGame(config: GameConfig): { state: GameState; events: Game
     equipmentDiscard: [],
     specialDeck: [],
     specialDiscard: [],
+    pending: [],
     round: emptyRound(0),
     result: null,
   };
 
-  const deck = [...shuffle(state, MONSTER_IDS.filter((id) => id !== FINAL_MONSTER)), FINAL_MONSTER];
+  const deck = [
+    ...shuffle(
+      state,
+      MONSTER_IDS.filter((id) => id !== FINAL_MONSTER),
+    ),
+    FINAL_MONSTER,
+  ];
   state.board = deck.splice(0, SLOT_COUNT).map(freshMonster);
   state.monsterDeck = deck;
   state.specialDeck = shuffle(state, buildSpecialDeck());
@@ -76,6 +86,9 @@ export function createGame(config: GameConfig): { state: GameState; events: Game
 
 function validateConfig(config: GameConfig): void {
   const { players } = config;
+  if (config.cardSet !== undefined && !CARD_SETS.includes(config.cardSet)) {
+    throw new GameRuleError('INVALID_CARD_SET', `Version de cartes inconnue : ${String(config.cardSet)}.`);
+  }
   if (players.length < MIN_PLAYERS || players.length > MAX_PLAYERS) {
     throw new GameRuleError('PLAYER_COUNT', `Il faut entre ${MIN_PLAYERS} et ${MAX_PLAYERS} joueurs.`);
   }
@@ -88,7 +101,10 @@ function validateConfig(config: GameConfig): void {
     if (p.teamId !== undefined) teamSizes.set(p.teamId, (teamSizes.get(p.teamId) ?? 0) + 1);
   }
   if (teamSizes.size > 0 && players.length < TEAM_MODE_MIN_PLAYERS) {
-    throw new GameRuleError('TEAMS_NOT_ALLOWED', `Les équipes sont réservées aux parties de ${TEAM_MODE_MIN_PLAYERS} joueurs ou plus.`);
+    throw new GameRuleError(
+      'TEAMS_NOT_ALLOWED',
+      `Les équipes sont réservées aux parties de ${TEAM_MODE_MIN_PLAYERS} joueurs ou plus.`,
+    );
   }
   for (const [teamId, size] of teamSizes) {
     if (size > MAX_TEAM_SIZE) {
