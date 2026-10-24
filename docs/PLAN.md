@@ -132,8 +132,8 @@ Fait : `packages/engine`, 58 tests dont 120 parties complètes simulées.
 - File d'événements animée : attaques, dégâts, mort d'un monstre, gain de carte.
 - **Livrable** : l'expérience « soirée jeu » complète.
 
-### Phase 5 — Mode Équipes (6 à 12 joueurs) — en partie
-Fait : choix de l'équipe dans le lobby, score commun, classement par camp. Le moteur envoie déjà aux coéquipiers la main et le plan des autres membres ; **reste à les afficher** sur l'écran Joueur.
+### Phase 5 — Mode Équipes (6 à 12 joueurs) ✅
+Fait : choix de l'équipe dans le lobby, score commun, classement par camp. Sur l'écran Joueur, le panneau « Ton équipe » montre la mise, le plan en cours et les cartes de chaque coéquipier.
 
 - Formation des équipes dans le lobby (3 joueurs maximum).
 - Canal de planification privé par équipe (actions proposées et validées en commun).

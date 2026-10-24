@@ -1,24 +1,24 @@
-import type { EquipmentId, GameView, Plan, PlayerView, SlotIndex, SpecialId } from '@chasseurs/engine';
+import type { EquipmentId, GameView, Plan, PlayerView, SpecialId } from '@chasseurs/engine';
 import type { RoomSnapshot } from '@chasseurs/protocol';
 import { Coins, Eye, ScrollText, Trophy, Users, WifiOff } from 'lucide-react';
 import { useState } from 'react';
 import { Board } from '../components/Board.tsx';
 import { CardTile } from '../components/CardTile.tsx';
 import { EventList, OrderStrip, Scoreboard, toLines } from '../components/GameInfo.tsx';
+import { TeamPanel } from '../components/TeamPanel.tsx';
 import {
   CARD_SET_LABELS,
   cardImage,
   equipmentName,
   equipmentTarget,
   equipmentText,
-  monsterName,
-  SLOT_LABELS,
   specialName,
   specialTarget,
   specialText,
 } from '../game/cards.ts';
 import { makeNames } from '../game/describe.ts';
 import { type PlanDraft, usePlanDraft } from '../game/plan-draft.ts';
+import { planSummary } from '../game/plan-summary.ts';
 import { actions, useStore } from '../net/store.ts';
 import { Button, cx, Pill, Sheet, Stepper } from '../ui/primitives.tsx';
 import { GameOver } from './GameOver.tsx';
@@ -133,11 +133,13 @@ function ActiveGame({ view, me }: { view: GameView; me: PlayerView }) {
         <OrderStrip view={view} me={me.id} />
       </section>
 
+      <TeamPanel view={view} me={me} />
+
       <section className="mt-4 flex-1 px-4 pb-4">
         {view.phase === 'bidding' && <BidPanel view={view} me={me} />}
         {showPlanner && <PlanPanel view={view} me={me} draft={draft} onDone={() => setEditing(false)} />}
         {planning && me.hasPlanned && !editing && myPlan && (
-          <Waiting view={view} plan={myPlan} onEdit={() => setEditing(true)} />
+          <Waiting view={view} plan={myPlan} nameOf={names.player} onEdit={() => setEditing(true)} />
         )}
       </section>
     </>
@@ -353,25 +355,22 @@ function PlayerPicker({
   );
 }
 
-function Waiting({ view, plan, onEdit }: { view: GameView; plan: Plan; onEdit: () => void }) {
+function Waiting({
+  view,
+  plan,
+  nameOf,
+  onEdit,
+}: {
+  view: GameView;
+  plan: Plan;
+  nameOf: (id: string) => string;
+  onEdit: () => void;
+}) {
   const waiting = view.players.filter((p) => !p.hasPlanned);
-  const target = (slot: SlotIndex) => {
-    const monster = view.board[slot];
-    return monster ? monsterName(monster.id) : SLOT_LABELS[slot];
-  };
-  const parts = [
-    plan.equipment &&
-      `${equipmentName(plan.equipment.card)} → ${
-        'slots' in plan.equipment ? plan.equipment.slots.map(target).join(' + ') : target(plan.equipment.slot)
-      }`,
-    plan.special && specialName(plan.special.card),
-    plan.boost > 0 && `+${plan.boost} 🪙`,
-  ].filter(Boolean);
-
   return (
     <div className="rounded-2xl border border-line bg-surface p-5">
       <p className="text-lg font-semibold">Plan envoyé</p>
-      <p className="mt-1 text-sm">{parts.join(' · ') || "L'éclaireur seulement"}</p>
+      <p className="mt-1 text-sm">{planSummary(plan, view, nameOf)}</p>
       <p className="mt-3 text-sm text-muted">En attente de {waiting.map((p) => p.name).join(', ')}…</p>
       <Button variant="secondary" className="mt-4 w-full" onClick={onEdit}>
         Modifier mon plan

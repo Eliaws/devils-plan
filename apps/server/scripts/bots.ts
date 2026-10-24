@@ -1,14 +1,18 @@
 // Outil de développement : fait rejoindre des joueurs automatiques à une partie,
 // pour tester seul. Ils misent 0 et attaquent à la Lame un monstre au hasard.
-// Usage : npm run bots -w @chasseurs/server -- CODE [nombre] [url]
+// Usage : npm run bots -w @chasseurs/server -- CODE [nombre] [url] [--team loups]
+// --team : place le premier bot dans cette équipe (pour tester le mode Équipe).
 
 import type { GameView } from '@chasseurs/engine';
-import type { ClientToServerEvents, ServerToClientEvents } from '@chasseurs/protocol';
+import type { ClientToServerEvents, ServerToClientEvents, TeamId } from '@chasseurs/protocol';
 import { io, type Socket } from 'socket.io-client';
 
-const [code, count = '2', url = 'http://localhost:3000'] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const teamFlag = args.indexOf('--team');
+const team = teamFlag >= 0 ? (args.splice(teamFlag, 2)[1] as TeamId | undefined) : undefined;
+const [code, count = '2', url = 'http://localhost:3000'] = args;
 if (!code) {
-  console.error('Usage : npm run bots -w @chasseurs/server -- CODE [nombre] [url]');
+  console.error('Usage : npm run bots -w @chasseurs/server -- CODE [nombre] [url] [--team loups]');
   process.exit(1);
 }
 
@@ -40,6 +44,10 @@ for (let i = 1; i <= Number(count); i++) {
     }
     playerId = result.data.playerId;
     console.log(`Bot ${i} a rejoint ${code.toUpperCase()}`);
+    if (i === 1 && team) {
+      const joined = await socket.emitWithAck('lobby:team', { teamId: team });
+      console.log(joined.ok ? `Bot 1 rejoint l'équipe ${team}` : `Équipe refusée : ${joined.error.message}`);
+    }
   });
   socket.on('game:update', ({ view }) => playerId && play(socket, view, playerId));
 }

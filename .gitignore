@@ -3,6 +3,5 @@ dist/
 coverage/
 *.log
 .DS_Store
-.claude
 # Réglages locaux de l’éditeur / de Claude Code
 .claude/
