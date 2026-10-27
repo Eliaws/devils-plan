@@ -1,13 +1,15 @@
-import type { GameEvent, GameView, PlayerId } from '@chasseurs/engine';
+import type { GameEvent, GameView, PlayerId } from '@umbra/engine';
 import { Check, Coins, Hourglass, Skull, Trophy } from 'lucide-react';
 import { motion } from 'motion/react';
+import { playerColor } from '../game/colors.ts';
 import { describe, type Line, makeNames, sideLabel, type Tone } from '../game/describe.ts';
 import { cx } from '../ui/primitives.tsx';
 
 /** Ordre de passage (ou liste des joueurs avant la révélation des mises), avec l'avancement de chacun. */
 export function OrderStrip({ view, me, large = false }: { view: GameView; me: PlayerId | null; large?: boolean }) {
   const ordered = view.order.length > 0 ? view.order.map((id) => view.players.find((p) => p.id === id)!) : view.players;
-  const done = (p: (typeof view.players)[number]) => (view.phase === 'bidding' ? p.hasBid : p.hasPlanned);
+  const done = (p: (typeof view.players)[number]) =>
+    view.phase === 'bidding' ? p.hasBid : view.phase === 'recap' ? p.isReady : p.hasPlanned;
   return (
     <ol
       className={cx('flex gap-2', large ? 'flex-wrap' : 'scrollbar-none -mx-4 overflow-x-auto px-4')}
@@ -22,6 +24,7 @@ export function OrderStrip({ view, me, large = false }: { view: GameView; me: Pl
             p.id === me ? 'border-gold/60 bg-gold/10' : 'border-line bg-surface',
           )}
         >
+          <span className="size-2 shrink-0 rounded-full" style={{ background: playerColor(view, p.id) }} aria-hidden />
           {view.order.length > 0 && <span className="text-xs text-muted tabular-nums">{index + 1}</span>}
           <span className="max-w-24 truncate">{p.id === me ? 'Toi' : p.name}</span>
           {view.revealedBids && view.phase === 'planning' && (

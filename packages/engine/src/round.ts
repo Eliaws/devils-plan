@@ -1,6 +1,6 @@
 import { SLOTS } from './cards.ts';
 import { dealDamage } from './combat.ts';
-import { allMonstersDefeated, emptyRound, getPlayer } from './state.ts';
+import { allMonstersDefeated, emptyRound, GameRuleError, getPlayer } from './state.ts';
 import type { GameEvent, GameState, PlayerId, RankingEntry } from './types.ts';
 
 export const COINS_PER_ROUND = 1;
@@ -34,10 +34,24 @@ function applyPoison(state: GameState, events: GameEvent[]): void {
   }
 }
 
-/** Fin de manche : carte Spéciale au meilleur attaquant, puis manche suivante. */
+/** Fin de manche : carte Spéciale au meilleur attaquant, puis pause « récap » jusqu'à ce que tous soient prêts. */
 export function endRound(state: GameState, events: GameEvent[]): void {
   awardSpecialCard(state, events);
-  startRound(state, state.round.number + 1, events);
+  state.phase = 'recap';
+}
+
+/** Un joueur a lu le récapitulatif. La manche suivante démarre quand tout le monde est prêt. */
+export function markReady(state: GameState, playerId: PlayerId, events: GameEvent[]): void {
+  if (state.phase !== 'recap') {
+    throw new GameRuleError('WRONG_PHASE', `Action impossible pendant la phase « ${state.phase} ».`);
+  }
+  getPlayer(state, playerId);
+  if (state.round.ready.includes(playerId)) return;
+  state.round.ready.push(playerId);
+  events.push({ type: 'playerReady', playerId });
+  if (state.players.every((p) => state.round.ready.includes(p.id))) {
+    startRound(state, state.round.number + 1, events);
+  }
 }
 
 /**

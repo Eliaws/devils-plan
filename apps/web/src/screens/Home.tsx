@@ -1,8 +1,9 @@
-import { MAX_NAME_LENGTH, ROOM_CODE_LENGTH } from '@chasseurs/protocol';
+import { MAX_NAME_LENGTH, ROOM_CODE_LENGTH } from '@umbra/protocol';
 import { Tv } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import { actions, lastName, useStore } from '../net/store.ts';
 import { navigate, paths } from '../router.ts';
+import { Eclipse } from '../ui/brand.tsx';
 import { Button } from '../ui/primitives.tsx';
 
 export function Home({ initialCode }: { initialCode?: string | undefined }) {
@@ -46,10 +47,12 @@ export function Home({ initialCode }: { initialCode?: string | undefined }) {
 
   return (
     <main className="pt-safe pb-safe mx-auto flex min-h-dvh max-w-md flex-col px-6">
-      <header className="mt-[12dvh] mb-10">
-        <p className="text-sm font-medium tracking-[0.3em] text-gold uppercase">Jeu de cartes</p>
-        <h1 className="mt-2 text-4xl font-bold tracking-tight">Chasseurs de l'Ombre</h1>
-        <p className="mt-3 text-muted">Éliminez les monstres, marquez le plus de points. De 3 à 12 joueurs.</p>
+      <header className="mt-[10dvh] mb-10 flex flex-col items-center text-center">
+        <Eclipse className="size-24" />
+        <h1 className="mt-4 font-display text-5xl font-bold tracking-[0.2em] text-gilded">UMBRA</h1>
+        <p className="mt-4 max-w-xs text-muted">
+          Chassez les monstres tapis dans l'ombre et marquez le plus de points. De 3 à 12 joueurs.
+        </p>
       </header>
 
       {lost && <p className="mb-6 rounded-xl border border-blood/40 bg-blood/10 px-4 py-3 text-sm">{lost}</p>}

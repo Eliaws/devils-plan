@@ -1,6 +1,6 @@
-# Chasseurs de l'Ombre
+# Umbra
 
-Adaptation numérique du jeu de cartes *Chasseurs de l'Ombre* : de 3 à 12 joueurs, chacun sur son téléphone, avec un écran partagé optionnel (TV ou ordinateur) qui affiche le plateau.
+*Umbra* (anciennement « Chasseurs de l'Ombre ») est un jeu de cartes : de 3 à 12 joueurs, chacun sur son téléphone, avec un écran partagé optionnel (TV ou ordinateur) qui affiche le plateau.
 
 - Plan de développement : [docs/PLAN.md](docs/PLAN.md)
 - Règles du livret : [docs/regles_chasseurs_de_lombre.pdf](docs/regles_chasseurs_de_lombre.pdf)
@@ -39,8 +39,10 @@ npm run dev
 
 - Le site est sur http://localhost:5173 (Vite, rechargement à chaud) ; le serveur de jeu tourne sur le port 3000.
 - Pour tester sur un vrai téléphone, ouvre l'adresse « Network » affichée par Vite (même Wi-Fi).
-- Pour jouer seul, ajoute des joueurs automatiques à une partie : `npm run bots -w @chasseurs/server -- CODE 2`.
-- Les illustrations sont converties de `assets/` (PNG) en WebP légers avec `npm run cards -w @chasseurs/web`.
+- Pour jouer seul, ajoute des joueurs automatiques à une partie : `npm run bots -w @umbra/server -- CODE 2`.
+  - `--team loups` place le premier bot dans une équipe (mode Équipe) ;
+  - `--start` fait lancer la partie par le bot hôte : une partie 100 % bots se joue devant l'écran principal.
+- Les illustrations sont converties de `assets/` (PNG) en WebP légers avec `npm run cards -w @umbra/web`.
 
 Vérifications :
 

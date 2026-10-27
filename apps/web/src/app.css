@@ -1,42 +1,61 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/cinzel";
 
-/* Thème sombre unique : peu de couleurs, chacune a un sens. */
+/* Umbra : un thème sombre unique, peu de couleurs, chacune a un sens. */
 @theme {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  /* Titres et logo : capitales gravées, comme sur les cartes. */
+  --font-display: "Cinzel Variable", "Inter Variable", serif;
 
-  --color-bg: #0a0b0f;
-  --color-surface: #12141a;
-  --color-raised: #1a1d25;
-  --color-line: #272b36;
-  --color-ink: #ecebe7;
-  --color-muted: #8d919e;
-  --color-faint: #5b5f6b;
+  --color-bg: #08080c;
+  --color-surface: #121219;
+  --color-raised: #1b1b25;
+  --color-line: #2a2a37;
+  --color-ink: #eeebe4;
+  --color-muted: #9592a0;
+  --color-faint: #5d5a69;
 
-  /* Action principale, pièces */
-  --color-gold: #e0a64b;
-  --color-gold-ink: #1b1306;
+  /* Action principale, pièces, victoire */
+  --color-gold: #e3ac52;
+  --color-gold-ink: #1d1407;
   /* Dégâts, mort */
   --color-blood: #e5484d;
   /* Protection / glace */
   --color-ice: #5eb1ef;
   /* Poison */
   --color-venom: #4cc38a;
-  /* Cartes Spéciales, magie */
+  /* Cartes Spéciales, magie, l'ombre d'Umbra */
   --color-arcane: #a87ff0;
 
-  --animate-shake: shake 0.4s ease-in-out;
+  --animate-shake: shake 0.45s ease-in-out;
+  --animate-drift: drift 40s ease-in-out infinite alternate;
 
   @keyframes shake {
     0%,
     100% {
       transform: translateX(0);
     }
-    25% {
+    20% {
+      transform: translateX(-6px) rotate(-1.5deg);
+    }
+    40% {
+      transform: translateX(6px) rotate(1.5deg);
+    }
+    60% {
       transform: translateX(-4px) rotate(-1deg);
     }
-    75% {
+    80% {
       transform: translateX(4px) rotate(1deg);
+    }
+  }
+
+  @keyframes drift {
+    from {
+      transform: translate3d(-4%, -2%, 0) scale(1);
+    }
+    to {
+      transform: translate3d(4%, 3%, 0) scale(1.08);
     }
   }
 }
@@ -53,6 +72,10 @@
     min-height: 100dvh;
     font-feature-settings: "cv11", "ss01";
     overscroll-behavior-y: none;
+    background:
+      radial-gradient(120% 70% at 50% -10%, #1d1530 0%, transparent 60%),
+      radial-gradient(90% 60% at 50% 110%, #140f1f 0%, transparent 60%), var(--color-bg);
+    background-attachment: fixed;
   }
 
   /* 16 px minimum : évite le zoom automatique d'iOS sur les champs. */
@@ -84,4 +107,12 @@
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* Texte doré dégradé pour le logo et les grands titres. */
+@utility text-gilded {
+  background: linear-gradient(180deg, #f6dca3 0%, #e3ac52 55%, #a8742a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

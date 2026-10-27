@@ -13,7 +13,7 @@ import {
   MAX_PLAYERS,
   MIN_PLAYERS,
   type PlayerId,
-} from '@chasseurs/engine';
+} from '@umbra/engine';
 import {
   type GameActionInput,
   ROOM_CODE_ALPHABET,
@@ -22,7 +22,7 @@ import {
   type RoomSnapshot,
   type RoomStatus,
   type TeamId,
-} from '@chasseurs/protocol';
+} from '@umbra/protocol';
 
 /** Erreur destinée au joueur (message en français). */
 export class RoomError extends Error {

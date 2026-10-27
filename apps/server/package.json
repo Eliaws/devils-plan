@@ -1,5 +1,5 @@
 {
-  "name": "@chasseurs/server",
+  "name": "@umbra/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,8 +11,8 @@
     "bots": "node scripts/bots.ts"
   },
   "dependencies": {
-    "@chasseurs/engine": "*",
-    "@chasseurs/protocol": "*",
+    "@umbra/engine": "*",
+    "@umbra/protocol": "*",
     "sirv": "^3.0.2",
     "socket.io": "^4.8.4",
     "zod": "^4.6.7"

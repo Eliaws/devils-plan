@@ -1,4 +1,4 @@
-# Chasseurs de l'Ombre — Règles numériques
+# Umbra — Règles numériques
 
 Ce document complète le livret (`regles_chasseurs_de_lombre.pdf`) : il fixe tout ce que le programme doit savoir précisément. **En cas de conflit, c'est ce document qui fait foi pour le code.**
 
@@ -49,7 +49,7 @@ Une manche = **une action par joueur** ✅.
    4. les Échanges macabres s'appliquent, dans l'ordre de passage ;
    5. les Envoûtements s'appliquent, dans le nouvel ordre de passage (version d'origine) ;
    6. pour chaque joueur, dans l'ordre de passage : ses effets différés de la manche précédente (cartes imprimées, §4 bis), puis son action. Dans une action : Filet magique, puis Équipement (et Marque du chasseur), puis Vague de choc.
-5. **Fin de manche** : attribution de la carte Spéciale (§5).
+5. **Fin de manche** : attribution de la carte Spéciale (§5), puis **récapitulatif** ✅ : chacun lit le résumé sur son téléphone (et peut envoyer des réactions à l'écran principal). La manche suivante ne démarre que quand **tous les joueurs** ont validé « Prêt ».
 
 La partie s'arrête dès que **tous les monstres sont morts** (pioche et plateau vides), même en cours de manche : les actions restantes sont perdues 🔧.
 

@@ -1,11 +1,12 @@
-import { CARD_SETS, MIN_PLAYERS, TEAM_MODE_MIN_PLAYERS } from '@chasseurs/engine';
-import { type RoomSnapshot, TEAMS } from '@chasseurs/protocol';
+import { CARD_SETS, MIN_PLAYERS, TEAM_MODE_MIN_PLAYERS } from '@umbra/engine';
+import { type RoomSnapshot, TEAMS } from '@umbra/protocol';
 import { Check, Copy, Crown, QrCode, Share2, Tv } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useState } from 'react';
 import { CARD_SET_LABELS } from '../game/cards.ts';
 import { actions } from '../net/store.ts';
 import { navigate, paths } from '../router.ts';
+import { Logo } from '../ui/brand.tsx';
 import { Button, cx, Presence, Sheet } from '../ui/primitives.tsx';
 
 export function Lobby({ room, playerId }: { room: RoomSnapshot; playerId: string }) {
@@ -21,9 +22,7 @@ export function Lobby({ room, playerId }: { room: RoomSnapshot; playerId: string
 
   const share = async () => {
     if (canShare) {
-      await navigator
-        .share({ title: "Chasseurs de l'Ombre", text: `Rejoins la partie ${room.code}`, url: invite })
-        .catch(() => {});
+      await navigator.share({ title: 'Umbra', text: `Rejoins la partie ${room.code}`, url: invite }).catch(() => {});
       return;
     }
     await navigator.clipboard.writeText(invite);
@@ -37,9 +36,10 @@ export function Lobby({ room, playerId }: { room: RoomSnapshot; playerId: string
 
   return (
     <main className="pt-safe pb-safe mx-auto flex min-h-dvh max-w-md flex-col px-5">
+      <Logo size="sm" className="mx-auto mt-2" />
       <header className="mt-4 rounded-2xl border border-line bg-surface p-5 text-center">
         <p className="text-sm text-muted">Code de la partie</p>
-        <p className="mt-1 text-5xl font-bold tracking-[0.25em] text-gold">{room.code}</p>
+        <p className="mt-1 font-display text-5xl font-bold tracking-[0.25em] text-gilded">{room.code}</p>
         <div className="mt-4 flex justify-center gap-2">
           <Button variant="secondary" className="min-h-10 px-4 text-sm" onClick={share}>
             {copied ? (

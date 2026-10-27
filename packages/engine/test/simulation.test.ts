@@ -77,6 +77,8 @@ function playRandomGame(seed: number, playerCount: number, cardSet: CardSet, tea
     expect(state.round.number).toBeLessThan(100);
     if (state.phase === 'bidding') {
       for (const p of state.players) step({ type: 'bid', playerId: p.id, amount: randomInt(rng, p.coins + 1) });
+    } else if (state.phase === 'recap') {
+      for (const p of state.players) step({ type: 'ready', playerId: p.id });
     } else {
       for (const p of state.players) {
         const scouted = p.specials.includes('eclaireur') && randomInt(rng, 3) === 0;

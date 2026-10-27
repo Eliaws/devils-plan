@@ -1,18 +1,20 @@
 // État client : connexion, salon, dernière vue de la partie.
 // Toute la logique réseau passe par ici ; les écrans ne font que lire et appeler des actions.
 
-import type { CardSet, GameEvent, PlayerId } from '@chasseurs/engine';
+import type { CardSet, GameEvent, PlayerId } from '@umbra/engine';
 import type {
   Ack,
   ClientToServerEvents,
   GameActionInput,
   GameUpdate,
+  Reaction,
+  ReactionPayload,
   Result,
   RoomSnapshot,
   ServerToClientEvents,
   Session,
   TeamId,
-} from '@chasseurs/protocol';
+} from '@umbra/protocol';
 import { io, type Socket } from 'socket.io-client';
 import { create } from 'zustand';
 
@@ -32,6 +34,8 @@ interface StoreState {
   error: string | null;
   /** Salon introuvable ou place perdue : il faut revenir à l'accueil. */
   lost: string | null;
+  /** Réactions récentes (quelques secondes), affichées par l'écran principal. */
+  reactions: Reaction[];
 }
 
 const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io({ transports: ['websocket', 'polling'] });
@@ -46,14 +50,15 @@ export const useStore = create<StoreState>(() => ({
   history: [],
   error: null,
   lost: null,
+  reactions: [],
 }));
 
 const set = useStore.setState;
 
 // --- Sessions mémorisées (reconnexion après fermeture de l'onglet) ---------
 
-const SESSIONS_KEY = 'chasseurs:sessions';
-const NAME_KEY = 'chasseurs:name';
+const SESSIONS_KEY = 'umbra:sessions';
+const NAME_KEY = 'umbra:name';
 
 function readSessions(): Record<string, Session> {
   try {
@@ -166,6 +171,14 @@ socket.on('game:update', (update) => {
   });
 });
 
+/** Durée d'affichage d'une réaction sur l'écran principal. */
+export const REACTION_LIFETIME_MS = 3500;
+
+socket.on('room:reaction', (reaction) => {
+  set((s) => ({ reactions: [...s.reactions.slice(-30), reaction] }));
+  setTimeout(() => set((s) => ({ reactions: s.reactions.filter((r) => r.id !== reaction.id) })), REACTION_LIFETIME_MS);
+});
+
 socket.on('room:closed', (reason) => {
   set({ lost: reason, room: null, intent: null });
   resetGame();
@@ -236,4 +249,7 @@ export const actions = {
   start: () => attempt(() => request('game:start')),
   act: (action: GameActionInput) => attempt(() => request('game:action', action)),
   restart: () => attempt(() => request('game:restart')),
+  ready: () => attempt(() => request('game:action', { type: 'ready' })),
+  /** Les réactions trop rapprochées sont simplement ignorées (pas de message d'erreur). */
+  react: (payload: ReactionPayload) => request('game:react', payload).catch(() => {}),
 };

@@ -1,7 +1,7 @@
 // Traduit les événements du moteur en phrases courtes pour le journal et les animations.
 
-import type { GameEvent, GameView, PlayerId, SideState } from '@chasseurs/engine';
-import { TEAMS } from '@chasseurs/protocol';
+import type { GameEvent, GameView, PlayerId, SideState } from '@umbra/engine';
+import { TEAMS } from '@umbra/protocol';
 import { equipmentName, monsterName, SLOT_LABELS, specialName } from './cards.ts';
 
 export type Tone = 'info' | 'hit' | 'kill' | 'magic' | 'blocked' | 'reward';

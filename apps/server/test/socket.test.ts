@@ -1,5 +1,5 @@
 import type { AddressInfo } from 'node:net';
-import type { ClientToServerEvents, GameUpdate, Result, RoomSnapshot, ServerToClientEvents } from '@chasseurs/protocol';
+import type { ClientToServerEvents, GameUpdate, Result, RoomSnapshot, ServerToClientEvents } from '@umbra/protocol';
 import { io as connect, type Socket } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { type App, createApp } from '../src/app.ts';
@@ -89,13 +89,40 @@ describe('serveur Socket.IO', () => {
       );
     }
 
-    // Le dernier plan déclenche la résolution : chacun reçoit sa vue de la manche suivante.
-    await waitFor(() => logs.every((log) => log.game?.view.round === 2));
+    // Le dernier plan déclenche la résolution : chacun reçoit sa vue du récapitulatif.
+    await waitFor(() => logs.every((log) => log.game?.view.phase === 'recap'));
     const first = logs[0]!.game!;
     expect(first.view.players[0]!.equipment).toEqual(['lame-du-chasseur']);
     expect(first.view.players[1]!.equipment).toBeNull();
     expect(first.events.some((e) => e.type === 'resolutionStarted')).toBe(true);
     expect(first.events.filter((e) => e.type === 'monsterHit').every((e) => e.amount === null)).toBe(true);
+
+    // La manche suivante ne démarre que quand tout le monde a lu le récapitulatif.
+    for (const socket of players.slice(0, 2)) unwrap(await socket.emitWithAck('game:action', { type: 'ready' }));
+    expect(logs[0]!.game!.view.phase).toBe('recap');
+    unwrap(await players[2]!.emitWithAck('game:action', { type: 'ready' }));
+    await waitFor(() => logs.every((log) => log.game?.view.round === 2 && log.game.view.phase === 'bidding'));
+  });
+
+  it('diffuse les réactions à tout le salon, avec un délai minimal entre deux réactions', async () => {
+    const alice = await client();
+    const { code } = unwrap(await alice.emitWithAck('room:create'));
+    unwrap(await alice.emitWithAck('room:join', { code, name: 'Alice' }));
+    const table = await client();
+    unwrap(await table.emitWithAck('room:watch', { code }));
+    const received: string[] = [];
+    table.on('room:reaction', (reaction) => {
+      if (reaction.payload.kind === 'emoji') received.push(`${reaction.name} ${reaction.payload.emoji}`);
+    });
+
+    unwrap(await alice.emitWithAck('game:react', { kind: 'emoji', emoji: '🔥' }));
+    const tooFast = await alice.emitWithAck('game:react', { kind: 'emoji', emoji: '😂' });
+    expect(tooFast).toMatchObject({ ok: false, error: { code: 'TOO_FAST' } });
+    const invalid = await alice.emitWithAck('game:react', { kind: 'emoji', emoji: '🍕' } as never);
+    expect(invalid).toMatchObject({ ok: false, error: { code: 'INVALID_INPUT' } });
+
+    await waitFor(() => received.length === 1);
+    expect(received).toEqual(['Alice 🔥']);
   });
 
   it('rend sa place à un joueur qui se reconnecte avec son jeton', async () => {

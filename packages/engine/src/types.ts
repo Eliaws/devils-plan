@@ -56,7 +56,8 @@ export interface Plan {
 
 // --- État ------------------------------------------------------------------
 
-export type Phase = 'bidding' | 'planning' | 'gameOver';
+/** recap : la manche est résolue, on attend que chacun ait lu le récapitulatif. */
+export type Phase = 'bidding' | 'planning' | 'recap' | 'gameOver';
 
 export interface PlayerState {
   id: PlayerId;
@@ -120,6 +121,8 @@ export interface RoundState {
   /** Dégâts réellement infligés pendant la manche (excédent exclu). */
   damage: Record<PlayerId, number>;
   killers: PlayerId[];
+  /** Joueurs prêts à passer à la manche suivante (phase recap). */
+  ready: PlayerId[];
 }
 
 export interface RankingEntry {
@@ -159,7 +162,8 @@ export interface GameState {
 export type Action =
   | { type: 'bid'; playerId: PlayerId; amount: number }
   | { type: 'scout'; playerId: PlayerId }
-  | { type: 'plan'; playerId: PlayerId; plan: Plan };
+  | { type: 'plan'; playerId: PlayerId; plan: Plan }
+  | { type: 'ready'; playerId: PlayerId };
 
 // --- Événements (pilotent les animations et le journal) --------------------
 
@@ -173,6 +177,7 @@ export type GameEvent =
   | { type: 'bidsRevealed'; bids: Record<PlayerId, number>; order: PlayerId[] }
   | { type: 'scouted'; playerId: PlayerId; report: ScoutEntry[] }
   | { type: 'planSubmitted'; playerId: PlayerId }
+  | { type: 'playerReady'; playerId: PlayerId }
   | { type: 'resolutionStarted'; order: PlayerId[] }
   | { type: 'shieldRaised'; playerId: PlayerId }
   | { type: 'effectBlocked'; playerId: PlayerId; sourcePlayerId: PlayerId; card: 'sceau-annulation' | 'envoutement' }

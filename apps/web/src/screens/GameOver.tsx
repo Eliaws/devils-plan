@@ -1,8 +1,9 @@
-import type { GameView } from '@chasseurs/engine';
-import type { RoomSnapshot } from '@chasseurs/protocol';
+import type { GameView } from '@umbra/engine';
+import type { RoomSnapshot } from '@umbra/protocol';
 import { Crown } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Scoreboard } from '../components/GameInfo.tsx';
+import { ReactionBar } from '../components/ReactionBar.tsx';
 import { sideLabel } from '../game/describe.ts';
 import { actions } from '../net/store.ts';
 import { navigate, paths } from '../router.ts';
@@ -24,7 +25,7 @@ export function GameOver({ view, room, playerId }: { view: GameView; room: RoomS
       >
         <Crown className="mx-auto size-12 text-gold" />
         <p className="mt-3 text-sm tracking-[0.25em] text-gold uppercase">
-          {winners.length > 1 ? 'Grands Chasseurs ex æquo' : "Grand Chasseur de l'Ombre"}
+          {winners.length > 1 ? 'Grands chasseurs ex æquo' : 'Grand chasseur d’Umbra'}
         </p>
         <h2 className="mt-1 text-3xl font-bold">{winners.map(sideLabel).join(' & ')}</h2>
         {playerId && <p className="mt-2 text-muted">{iWon ? 'Bravo, tu as gagné !' : 'La prochaine sera la bonne.'}</p>}
@@ -33,6 +34,12 @@ export function GameOver({ view, room, playerId }: { view: GameView; room: RoomS
       <div className="mt-8">
         <Scoreboard view={view} me={playerId} />
       </div>
+
+      {playerId && (
+        <div className="mt-8">
+          <ReactionBar />
+        </div>
+      )}
 
       {playerId && (
         <div className="mt-auto flex flex-col gap-2 pt-8">

@@ -1,10 +1,11 @@
-import type { EquipmentId, GameView, Plan, PlayerView, SpecialId } from '@chasseurs/engine';
-import type { RoomSnapshot } from '@chasseurs/protocol';
+import type { EquipmentId, GameView, Plan, PlayerView, SpecialId } from '@umbra/engine';
+import type { RoomSnapshot } from '@umbra/protocol';
 import { Coins, Eye, ScrollText, Trophy, Users, WifiOff } from 'lucide-react';
 import { useState } from 'react';
 import { Board } from '../components/Board.tsx';
 import { CardTile } from '../components/CardTile.tsx';
 import { EventList, OrderStrip, Scoreboard, toLines } from '../components/GameInfo.tsx';
+import { ReactionBar } from '../components/ReactionBar.tsx';
 import { TeamPanel } from '../components/TeamPanel.tsx';
 import {
   CARD_SET_LABELS,
@@ -20,10 +21,11 @@ import { makeNames } from '../game/describe.ts';
 import { type PlanDraft, usePlanDraft } from '../game/plan-draft.ts';
 import { planSummary } from '../game/plan-summary.ts';
 import { actions, useStore } from '../net/store.ts';
+import { Eclipse } from '../ui/brand.tsx';
 import { Button, cx, Pill, Sheet, Stepper } from '../ui/primitives.tsx';
 import { GameOver } from './GameOver.tsx';
 
-const PHASE_LABELS = { bidding: 'Mises', planning: 'Plans', gameOver: 'Fin' } as const;
+const PHASE_LABELS = { bidding: 'Mises', planning: 'Plans', recap: 'Récapitulatif', gameOver: 'Fin' } as const;
 
 export function PlayerGame({ view, room, playerId }: { view: GameView; room: RoomSnapshot; playerId: string }) {
   const connected = useStore((s) => s.connected);
@@ -38,6 +40,7 @@ export function PlayerGame({ view, room, playerId }: { view: GameView; room: Roo
   return (
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
       <header className="pt-safe sticky top-0 z-20 flex items-center gap-2 border-b border-line bg-bg/90 px-4 pb-3 backdrop-blur">
+        <Eclipse className="size-7 shrink-0" />
         <div className="flex-1">
           <p className="text-xs text-muted">Manche {view.round}</p>
           <p className="font-semibold">{PHASE_LABELS[view.phase]}</p>
@@ -90,10 +93,11 @@ export function PlayerGame({ view, room, playerId }: { view: GameView; room: Roo
         )}
       </Sheet>
 
+      {/* La dernière manche n'a pas de phase récap : son résumé s'ouvre par-dessus l'écran de fin. */}
       <Sheet
-        open={lastResolution !== null}
+        open={view.phase === 'gameOver' && lastResolution !== null}
         onClose={actions.dismissResolution}
-        title={`Résolution de la manche ${view.round - 1}`}
+        title="Dernière manche"
       >
         {lastResolution && <EventList lines={toLines(lastResolution, view, playerId)} animate />}
         <Button className="mt-6 mb-2 w-full" onClick={actions.dismissResolution}>
@@ -113,6 +117,20 @@ function ActiveGame({ view, me }: { view: GameView; me: PlayerView }) {
 
   const planning = view.phase === 'planning';
   const showPlanner = planning && (!me.hasPlanned || editing);
+
+  if (view.phase === 'recap') {
+    return (
+      <>
+        <section className="px-4 pt-4">
+          <RecapPanel view={view} me={me} />
+        </section>
+        <section className="px-4 pt-5 pb-6">
+          <h2 className="mb-2 text-sm text-muted">Le plateau pour la manche suivante</h2>
+          <Board view={view} nameOf={names.player} />
+        </section>
+      </>
+    );
+  }
 
   return (
     <>
@@ -143,6 +161,44 @@ function ActiveGame({ view, me }: { view: GameView; me: PlayerView }) {
         )}
       </section>
     </>
+  );
+}
+
+// --- Récapitulatif -----------------------------------------------------------
+
+function RecapPanel({ view, me }: { view: GameView; me: PlayerView }) {
+  const lastResolution = useStore((s) => s.lastResolution);
+  const lines = lastResolution ? toLines(lastResolution, view, me.id) : [];
+  const waiting = view.players.filter((p) => !p.isReady);
+
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-5">
+      <h2 className="font-display text-xl font-semibold">Manche {view.round} terminée</h2>
+      <div className="mt-4">
+        {lines.length > 0 ? (
+          <EventList lines={lines} animate />
+        ) : (
+          <p className="text-sm text-muted">Le détail de la manche est sur l'écran principal et dans le journal.</p>
+        )}
+      </div>
+
+      <div className="mt-6">
+        <ReactionBar />
+      </div>
+
+      <div className="mt-6">
+        {me.isReady ? (
+          <p className="rounded-xl bg-raised px-4 py-3 text-center text-sm">
+            <span className="font-medium text-venom">Prêt !</span>{' '}
+            <span className="text-muted">En attente de {waiting.map((p) => p.name).join(', ')}…</span>
+          </p>
+        ) : (
+          <Button className="w-full" onClick={() => actions.ready()}>
+            Prêt pour la manche {view.round + 1}
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { act, biddingInOrder, eventsOfType, expectRejected, give, lame, newGame, setBoard } from './helpers.ts';
+import {
+  act,
+  biddingInOrder,
+  eventsOfType,
+  expectRejected,
+  give,
+  lame,
+  newGame,
+  planAll,
+  setBoard,
+} from './helpers.ts';
 
 describe('mises et ordre de passage', () => {
   it('ordonne par mise décroissante et fait payer tout le monde', () => {
@@ -54,8 +64,8 @@ describe('planification', () => {
     expect(state.phase).toBe('planning');
     expect(state.round.plans.p1).toEqual(lame(1));
     const { state: after } = act(state, { type: 'plan', playerId: 'p3', plan: lame(0) });
-    expect(after.round.number).toBe(2);
-    expect(after.phase).toBe('bidding');
+    expect(after.round.number).toBe(1);
+    expect(after.phase).toBe('recap');
   });
 
   it('refuse les plans invalides', () => {
@@ -141,5 +151,32 @@ describe("L'éclaireur", () => {
       plan: { special: { card: 'vague-de-choc' }, boost: 0 },
     }).state;
     expectRejected(planned, { type: 'scout', playerId: 'p2' }, 'SPECIAL_ALREADY_USED');
+  });
+});
+
+describe('récapitulatif entre deux manches', () => {
+  it('attend que tout le monde soit prêt avant de démarrer la manche suivante', () => {
+    let state = planAll(biddingInOrder(newGame(), ['p1', 'p2', 'p3']).state, {
+      p1: lame(0),
+      p2: lame(1),
+      p3: lame(2),
+    }).state;
+    expect(state.phase).toBe('recap');
+    expectRejected(state, { type: 'bid', playerId: 'p1', amount: 0 }, 'WRONG_PHASE');
+
+    state = act(state, { type: 'ready', playerId: 'p1' }).state;
+    state = act(state, { type: 'ready', playerId: 'p1' }).state; // sans effet la deuxième fois
+    state = act(state, { type: 'ready', playerId: 'p2' }).state;
+    expect(state.phase).toBe('recap');
+    expect(state.round.ready).toEqual(['p1', 'p2']);
+
+    const { state: after, events } = act(state, { type: 'ready', playerId: 'p3' });
+    expect(after.phase).toBe('bidding');
+    expect(after.round.number).toBe(2);
+    expect(eventsOfType(events, 'roundStarted')).toEqual([{ type: 'roundStarted', round: 2 }]);
+  });
+
+  it('refuse « prêt » en dehors du récapitulatif', () => {
+    expectRejected(newGame(), { type: 'ready', playerId: 'p1' }, 'WRONG_PHASE');
   });
 });

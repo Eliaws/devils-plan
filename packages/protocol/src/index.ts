@@ -1,7 +1,7 @@
 // Contrat entre le serveur et les clients : événements Socket.IO typés
 // et schémas Zod pour valider tout ce qui vient d'un client.
 
-import { CARD_SETS, type CardSet, type GameEvent, type GameView, type Plan, type PlayerId } from '@chasseurs/engine';
+import { CARD_SETS, type CardSet, type GameEvent, type GameView, type Plan, type PlayerId } from '@umbra/engine';
 import { z } from 'zod';
 
 // --- Salons ----------------------------------------------------------------
@@ -79,6 +79,7 @@ export const planSchema = z.object({
 export const gameActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('bid'), amount: z.number().int().min(0).max(999) }),
   z.object({ type: z.literal('scout') }),
+  z.object({ type: z.literal('ready') }),
   z.object({ type: z.literal('plan'), plan: planSchema }),
 ]);
 export type GameActionInput = z.infer<typeof gameActionSchema>;
@@ -121,6 +122,27 @@ export interface Session {
 
 // --- Événements Socket.IO --------------------------------------------------
 
+// --- Réactions (envoyées à l'écran principal) -------------------------------
+
+export const EMOJI_REACTIONS = ['😂', '😱', '🔥', '💀', '👏', '🤡', '😭', '🙏'] as const;
+export type EmojiReaction = (typeof EMOJI_REACTIONS)[number];
+
+/** Délai minimal entre deux réactions d'un même joueur. */
+export const REACTION_COOLDOWN_MS = 800;
+
+/** Union extensible : on pourra y ajouter { kind: 'gif', ... } plus tard. */
+export const reactionInputSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('emoji'), emoji: z.enum(EMOJI_REACTIONS) }),
+]);
+export type ReactionPayload = z.infer<typeof reactionInputSchema>;
+
+export interface Reaction {
+  id: string;
+  playerId: PlayerId;
+  name: string;
+  payload: ReactionPayload;
+}
+
 export interface ErrorPayload {
   code: string;
   message: string;
@@ -140,6 +162,7 @@ export interface ClientToServerEvents {
   'game:start': (ack: Ack) => void;
   'game:action': (input: GameActionInput, ack: Ack) => void;
   'game:restart': (ack: Ack) => void;
+  'game:react': (input: ReactionPayload, ack: Ack) => void;
 }
 
 export interface ServerToClientEvents {
@@ -147,4 +170,6 @@ export interface ServerToClientEvents {
   'game:update': (update: GameUpdate) => void;
   /** Le salon n'existe plus, ou le joueur en a été retiré. */
   'room:closed': (reason: string) => void;
+  /** Réaction d'un joueur, diffusée à tout le salon (écran principal compris). */
+  'room:reaction': (reaction: Reaction) => void;
 }

@@ -1,28 +1,41 @@
 // Outil de développement : fait rejoindre des joueurs automatiques à une partie,
-// pour tester seul. Ils misent 0 et attaquent à la Lame un monstre au hasard.
-// Usage : npm run bots -w @chasseurs/server -- CODE [nombre] [url] [--team loups]
+// pour tester seul. Ils misent 0, attaquent à la Lame un monstre au hasard,
+// réagissent parfois pendant le récapitulatif puis se déclarent prêts.
+// Usage : npm run bots -w @umbra/server -- CODE [nombre] [url] [--team loups]
 // --team : place le premier bot dans cette équipe (pour tester le mode Équipe).
+// --start : le bot hôte lance la partie dès que tous les bots sont là (partie 100 % bots).
 
-import type { GameView } from '@chasseurs/engine';
-import type { ClientToServerEvents, ServerToClientEvents, TeamId } from '@chasseurs/protocol';
+import type { GameView } from '@umbra/engine';
+import { type ClientToServerEvents, EMOJI_REACTIONS, type ServerToClientEvents, type TeamId } from '@umbra/protocol';
 import { io, type Socket } from 'socket.io-client';
 
 const args = process.argv.slice(2);
 const teamFlag = args.indexOf('--team');
 const team = teamFlag >= 0 ? (args.splice(teamFlag, 2)[1] as TeamId | undefined) : undefined;
+const startFlag = args.indexOf('--start');
+if (startFlag >= 0) args.splice(startFlag, 1);
 const [code, count = '2', url = 'http://localhost:3000'] = args;
 if (!code) {
-  console.error('Usage : npm run bots -w @chasseurs/server -- CODE [nombre] [url] [--team loups]');
+  console.error('Usage : npm run bots -w @umbra/server -- CODE [nombre] [url] [--team loups]');
   process.exit(1);
 }
 
 const DELAY_MS = 700;
+/** Temps laissé aux humains pour lire le récapitulatif. */
+const RECAP_DELAY_MS = 4000;
 
 function play(socket: Socket<ServerToClientEvents, ClientToServerEvents>, view: GameView, playerId: string) {
   const me = view.players.find((p) => p.id === playerId);
   if (!me) return;
   if (view.phase === 'bidding' && !me.hasBid) {
     setTimeout(() => socket.emit('game:action', { type: 'bid', amount: 0 }, () => {}), DELAY_MS);
+  }
+  if (view.phase === 'recap' && !me.isReady) {
+    if (Math.random() < 0.6) {
+      const emoji = EMOJI_REACTIONS[Math.floor(Math.random() * EMOJI_REACTIONS.length)]!;
+      setTimeout(() => socket.emit('game:react', { kind: 'emoji', emoji }, () => {}), 500 + Math.random() * 2500);
+    }
+    setTimeout(() => socket.emit('game:action', { type: 'ready' }, () => {}), RECAP_DELAY_MS);
   }
   if (view.phase === 'planning' && !me.hasPlanned) {
     const slots = ([0, 1, 2] as const).filter((slot) => view.board[slot] !== null);
@@ -50,4 +63,12 @@ for (let i = 1; i <= Number(count); i++) {
     }
   });
   socket.on('game:update', ({ view }) => playerId && play(socket, view, playerId));
+  if (startFlag >= 0) {
+    let started = false;
+    socket.on('room:update', (room) => {
+      if (started || room.status !== 'lobby' || room.hostId !== playerId || room.players.length < Number(count)) return;
+      started = true;
+      socket.emit('game:start', (result) => console.log(result.ok ? 'Partie lancée' : result.error.message));
+    });
+  }
 }

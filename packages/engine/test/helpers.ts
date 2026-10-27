@@ -77,6 +77,19 @@ export function planAll(state: GameState, plans: Record<PlayerId, Plan>): { stat
   return { state: current, events };
 }
 
+/** Tout le monde valide le récapitulatif : la manche suivante démarre (sans effet hors phase recap). */
+export function readyAll(state: GameState): { state: GameState; events: GameEvent[] } {
+  const events: GameEvent[] = [];
+  let current = state;
+  if (current.phase !== 'recap') return { state: current, events };
+  for (const player of state.players) {
+    const step = act(current, { type: 'ready', playerId: player.id });
+    current = step.state;
+    events.push(...step.events);
+  }
+  return { state: current, events };
+}
+
 /** Joue une manche complète : mises pour obtenir `order`, puis plans. */
 export function playRound(
   state: GameState,
@@ -85,7 +98,8 @@ export function playRound(
 ): { state: GameState; events: GameEvent[] } {
   const bidding = biddingInOrder(state, order);
   const planning = planAll(bidding.state, plans);
-  return { state: planning.state, events: [...bidding.events, ...planning.events] };
+  const ready = readyAll(planning.state);
+  return { state: ready.state, events: [...bidding.events, ...planning.events, ...ready.events] };
 }
 
 export const lame = (slot: SlotIndex, boost = 0): Plan => ({ equipment: { card: 'lame-du-chasseur', slot }, boost });

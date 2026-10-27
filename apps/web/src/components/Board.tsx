@@ -1,4 +1,4 @@
-import type { GameView, MonsterView, PendingEffect, ScoutEntry } from '@chasseurs/engine';
+import type { GameView, MonsterView, PendingEffect, ScoutEntry } from '@umbra/engine';
 import { Clock, Droplet, Heart, Network, Skull, Snowflake } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { cardImage, monsterName, SLOT_LABELS } from '../game/cards.ts';
@@ -9,6 +9,8 @@ export interface SlotFlash {
   /** Change à chaque événement pour relancer l'animation. */
   key: number;
   tone: Tone;
+  /** Texte flottant (« +15 », « Raté »…). */
+  label?: string;
 }
 
 interface BoardProps {

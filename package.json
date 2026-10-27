@@ -1,5 +1,5 @@
 {
-  "name": "chasseurs-de-lombre",
+  "name": "umbra",
   "private": true,
   "engines": {
     "node": ">=24"
@@ -9,9 +9,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently -k -n server,web -c yellow,cyan \"npm run dev -w @chasseurs/server\" \"npm run dev -w @chasseurs/web\"",
-    "build": "npm run build -w @chasseurs/web",
-    "start": "npm run start -w @chasseurs/server",
+    "dev": "concurrently -k -n server,web -c yellow,cyan \"npm run dev -w @umbra/server\" \"npm run dev -w @umbra/web\"",
+    "build": "npm run build -w @umbra/web",
+    "start": "npm run start -w @umbra/server",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "biome check .",

@@ -1,5 +1,5 @@
 // Convertit les illustrations PNG (≈3 Mo chacune) de /assets en WebP légers pour le site.
-// Usage : npm run cards -w @chasseurs/web
+// Usage : npm run cards -w @umbra/web
 
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';

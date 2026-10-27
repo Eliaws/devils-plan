@@ -1,7 +1,7 @@
 import { clone } from './clone.ts';
 import { placeBid, scout, submitPlan } from './planning.ts';
 import { resolveRound } from './resolution.ts';
-import { endRound, finishGame } from './round.ts';
+import { endRound, finishGame, markReady } from './round.ts';
 import { allMonstersDefeated, GameRuleError } from './state.ts';
 import type { Action, ApplyResult, GameEvent, GameState } from './types.ts';
 
@@ -26,6 +26,9 @@ export function apply(state: GameState, action: Action): ApplyResult {
           if (allMonstersDefeated(next)) finishGame(next, events);
           else endRound(next, events);
         }
+        break;
+      case 'ready':
+        markReady(next, action.playerId, events);
         break;
     }
   } catch (error) {

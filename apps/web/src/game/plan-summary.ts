@@ -1,4 +1,4 @@
-import type { GameView, Plan, PlayerId, SlotIndex } from '@chasseurs/engine';
+import type { GameView, Plan, PlayerId, SlotIndex } from '@umbra/engine';
 import { equipmentName, monsterName, SLOT_LABELS, specialName } from './cards.ts';
 
 /** Résumé d'un plan en une ligne : « Double griffe → Golem + Yéti · Sceau → Bob · +2 🪙 ». */

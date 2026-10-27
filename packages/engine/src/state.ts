@@ -51,6 +51,7 @@ export function emptyRound(number: number): RoundState {
     scouted: {},
     damage: {},
     killers: [],
+    ready: [],
   };
 }
 

@@ -1,4 +1,4 @@
-# Héberger Chasseurs de l'Ombre sur son serveur
+# Héberger Umbra sur son serveur
 
 Le jeu tourne dans **un seul processus Node**. Il sert le site compilé et gère les connexions temps réel (WebSocket), sur un seul port (3000 par défaut). Aucune base de données : les parties vivent en mémoire.
 
@@ -9,8 +9,8 @@ Il faut donc un serveur capable de faire tourner Node en continu : un VPS ou une
 Sur le serveur, avec **Node 24** (via NodeSource ou nvm, voir le README) :
 
 ```bash
-git clone https://github.com/Eliaws/devils-plan.git chasseurs
-cd chasseurs
+git clone https://github.com/Eliaws/devils-plan.git umbra
+cd umbra
 npm ci
 npm run build
 ```
@@ -32,17 +32,17 @@ Variables d'environnement :
 
 ## 2. Le lancer en service (systemd)
 
-`/etc/systemd/system/chasseurs.service` :
+`/etc/systemd/system/umbra.service` :
 
 ```ini
 [Unit]
-Description=Chasseurs de l'Ombre
+Description=Umbra
 After=network.target
 
 [Service]
 Type=simple
-User=chasseurs
-WorkingDirectory=/home/chasseurs/chasseurs
+User=umbra
+WorkingDirectory=/home/umbra/umbra
 Environment=NODE_ENV=production PORT=3000 HOST=127.0.0.1
 ExecStart=/usr/bin/node apps/server/src/index.ts
 Restart=on-failure
@@ -55,7 +55,7 @@ Adapte `User`, `WorkingDirectory` et le chemin de `node` (`which node`). Puis :
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now chasseurs
+sudo systemctl enable --now umbra
 ```
 
 ## 3. Nom de domaine et HTTPS
@@ -97,7 +97,7 @@ Les en-têtes `Upgrade` et `Connection` sont indispensables pour les WebSockets.
 git pull
 npm ci
 npm run build
-sudo systemctl restart chasseurs
+sudo systemctl restart umbra
 ```
 
 Un redémarrage efface les parties en cours (elles sont en mémoire) : mieux vaut le faire quand personne ne joue.

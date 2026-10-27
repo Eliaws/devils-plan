@@ -1,4 +1,4 @@
-import type { EquipmentId, GameView, PlayerView, SpecialId } from '@chasseurs/engine';
+import type { EquipmentId, GameView, PlayerView, SpecialId } from '@umbra/engine';
 import { ChevronDown, Coins } from 'lucide-react';
 import { equipmentName, specialName } from '../game/cards.ts';
 import { makeNames, sideLabel } from '../game/describe.ts';
@@ -54,6 +54,7 @@ export function TeamPanel({ view, me }: { view: GameView; me: PlayerView }) {
 function status(mate: PlayerView, view: GameView, nameOf: (id: string) => string): string {
   if (view.phase === 'bidding') return mate.hasBid ? `Mise ${mate.bid ?? 0} 🪙` : 'Réfléchit à sa mise…';
   if (view.phase === 'planning') return mate.plan ? planSummary(mate.plan, view, nameOf) : 'Prépare son plan…';
+  if (view.phase === 'recap') return mate.isReady ? 'Prêt pour la suite' : 'Lit le récapitulatif…';
   return '';
 }
 

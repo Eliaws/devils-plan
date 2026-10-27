@@ -1,4 +1,4 @@
-import { createGame, viewFor } from '@chasseurs/engine';
+import { createGame, viewFor } from '@umbra/engine';
 import { expect, describe as group, it } from 'vitest';
 import { describe, makeNames } from '../src/game/describe.ts';
 

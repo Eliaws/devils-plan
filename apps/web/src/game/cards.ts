@@ -8,7 +8,7 @@ import {
   type MonsterId,
   SPECIALS,
   type SpecialId,
-} from '@chasseurs/engine';
+} from '@umbra/engine';
 
 const images = import.meta.glob<string>('../assets/cards/*.webp', { eager: true, import: 'default', query: '?url' });
 

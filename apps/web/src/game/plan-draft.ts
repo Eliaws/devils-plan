@@ -11,7 +11,7 @@ import {
   type SlotIndex,
   type SpecialId,
   type SpecialPlay,
-} from '@chasseurs/engine';
+} from '@umbra/engine';
 import { useState } from 'react';
 import { equipmentTarget, specialName, specialTarget } from './cards.ts';
 

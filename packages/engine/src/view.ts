@@ -38,6 +38,8 @@ export interface PlayerView {
   specialCount: number;
   hasBid: boolean;
   hasPlanned: boolean;
+  /** Phase recap : a lu le récapitulatif. */
+  isReady: boolean;
   /** Les champs suivants valent null sauf pour soi-même et ses coéquipiers. */
   equipment: EquipmentId[] | null;
   specials: SpecialId[] | null;
@@ -109,6 +111,7 @@ export function viewFor(state: GameState, viewer: Viewer): GameView {
         specialCount: p.specials.length,
         hasBid: round.bids[p.id] !== undefined,
         hasPlanned: round.plans[p.id] !== undefined,
+        isReady: round.ready.includes(p.id),
         equipment: visible ? p.equipment : null,
         specials: visible ? p.specials : null,
         bid: visible || round.revealedBids ? (round.bids[p.id] ?? null) : null,

@@ -1,19 +1,22 @@
 // Branche Socket.IO sur RoomManager : validation des messages, salons Socket.IO,
 // et envoi à chaque client de SA vue de la partie (jamais l'état brut).
 
-import { eventsFor, type GameEvent, type PlayerId, type Viewer, viewFor } from '@chasseurs/engine';
+import { randomUUID } from 'node:crypto';
+import { eventsFor, type GameEvent, type PlayerId, type Viewer, viewFor } from '@umbra/engine';
 import {
   type ClientToServerEvents,
   type ErrorPayload,
   gameActionSchema,
   joinInputSchema,
+  REACTION_COOLDOWN_MS,
   type Result,
+  reactionInputSchema,
   resumeInputSchema,
   type ServerToClientEvents,
   settingsInputSchema,
   teamInputSchema,
   watchInputSchema,
-} from '@chasseurs/protocol';
+} from '@umbra/protocol';
 import type { Server, Socket } from 'socket.io';
 import { ZodError } from 'zod';
 import { type Member, type Room, RoomError, type RoomManager } from './rooms.ts';
@@ -22,6 +25,7 @@ interface SocketData {
   code: string | null;
   /** null pour un écran « Table ». */
   playerId: PlayerId | null;
+  lastReactionAt: number;
 }
 
 export type GameServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
@@ -88,7 +92,7 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
   };
 
   io.on('connection', (socket) => {
-    socket.data = { code: null, playerId: null };
+    socket.data = { code: null, playerId: null, lastReactionAt: 0 };
 
     socket.on('room:create', (ack) => {
       handle(ack, () => ({ code: manager.createRoom().code }));
@@ -184,6 +188,26 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
         const { room, playerId } = current(socket);
         manager.restart(room, playerId);
         broadcastRoom(room);
+        return null;
+      });
+    });
+
+    socket.on('game:react', (input, ack) => {
+      handle(ack, () => {
+        const payload = reactionInputSchema.parse(input);
+        const { room, playerId } = current(socket);
+        const now = Date.now();
+        if (now - socket.data.lastReactionAt < REACTION_COOLDOWN_MS) {
+          throw new RoomError('TOO_FAST', 'Doucement, une réaction à la fois !');
+        }
+        socket.data.lastReactionAt = now;
+        const member = manager.requireMember(room, playerId);
+        io.to(channel(room.code)).emit('room:reaction', {
+          id: randomUUID(),
+          playerId,
+          name: member.name,
+          payload,
+        });
         return null;
       });
     });

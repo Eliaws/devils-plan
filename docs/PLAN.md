@@ -1,8 +1,10 @@
-# Chasseurs de l'Ombre — Plan de développement
+# Umbra — Plan de développement
+
+*Anciennement « Chasseurs de l'Ombre ».*
 
 ## 1. Vision
 
-Adaptation numérique du jeu de cartes **Chasseurs de l'Ombre**, jouable de 3 à 12 joueurs.
+Adaptation numérique du jeu de cartes **Umbra**, jouable de 3 à 12 joueurs.
 
 - **Chaque joueur sur son appareil** (téléphone ou PC) : il voit sa main, ses pièces et fait ses choix en secret (mises, cartes jouées, cibles).
 - **Un écran partagé optionnel (« vue Table »)** : une TV ou un PC affiche le plateau (monstres, ordre de passage, scores, animations de combat). On peut aussi jouer à distance sans lui, chaque joueur voyant alors le plateau sur son propre écran.
@@ -141,6 +143,9 @@ Fait : choix de l'équipe dans le lobby, score commun, classement par camp. Sur 
 
 ### Phase 6 — Finitions
 - Fait : illustrations optimisées (WebP), écran de fin, guide de déploiement.
+- Fait : identité **Umbra** (logo éclipse, typographie Cinzel), écran principal refait (scène animée, jetons de joueurs, classement animé, podium).
+- Fait : **récapitulatif synchronisé** (la manche suivante attend que tout le monde soit prêt) et **réactions emoji** envoyées à l'écran principal.
+- Réactions en **GIF** depuis une banque en ligne (GIPHY) : le format des réactions est déjà prévu pour (`kind: 'gif'`).
 - Dos de cartes, sons.
 - Journal conservé côté serveur (aujourd'hui, il repart de zéro quand on recharge la page).
 - Option de partie « Sceau d'annulation en réaction ».

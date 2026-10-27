@@ -15,7 +15,7 @@ const { httpServer, io, manager, servesWeb } = createApp({
 setInterval(() => manager.cleanup(), CLEANUP_INTERVAL_MS).unref();
 
 httpServer.listen(PORT, HOST, () => {
-  console.log(`Chasseurs de l'Ombre : http://localhost:${PORT}${servesWeb ? '' : ' (API seule, front non compilé)'}`);
+  console.log(`Umbra : http://localhost:${PORT}${servesWeb ? '' : ' (API seule, front non compilé)'}`);
 });
 
 const shutdown = () => {
