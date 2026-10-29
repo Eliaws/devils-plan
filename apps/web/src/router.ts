@@ -6,6 +6,8 @@ export type Route =
   | { name: 'home'; code?: string }
   | { name: 'play'; code: string }
   | { name: 'table'; code: string }
+  /** Développement uniquement : galerie des effets visuels. */
+  | { name: 'gallery' }
   | { name: 'notFound' };
 
 const listeners = new Set<() => void>();
@@ -34,6 +36,7 @@ export function parseRoute(pathname: string, search = ''): Route {
   }
   if (first === 'p' && normalized) return { name: 'play', code: normalized };
   if (first === 't' && normalized) return { name: 'table', code: normalized };
+  if (import.meta.env.DEV && pathname === '/dev/effets') return { name: 'gallery' };
   return { name: 'notFound' };
 }
 

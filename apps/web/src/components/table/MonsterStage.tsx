@@ -6,6 +6,9 @@ import type { Tone } from '../../game/describe.ts';
 import { Eclipse } from '../../ui/brand.tsx';
 import { cx } from '../../ui/primitives.tsx';
 import type { SlotFlash } from '../Board.tsx';
+import { CardBack } from '../effects/CardBack.tsx';
+import { Embers } from '../effects/Embers.tsx';
+import { MonsterEffects } from '../effects/MonsterEffects.tsx';
 
 const SLOT_KEYS = ['gauche', 'centre', 'droite'];
 
@@ -20,7 +23,7 @@ export function MonsterStage({
   nameOf: (id: string) => string;
 }) {
   return (
-    <div className="flex items-end justify-center gap-[3vw]">
+    <div className="flex items-start justify-center gap-[3vw]">
       {view.board.map((monster, slot) => (
         <StageCard
           key={SLOT_KEYS[slot]}
@@ -73,39 +76,52 @@ function StageCard({
           {monster ? (
             <motion.div
               key={monster.id}
-              className={cx('absolute inset-0 overflow-hidden rounded-2xl', hit && 'animate-shake')}
-              initial={{ rotateY: 180, opacity: 0 }}
+              className="absolute inset-0 rounded-2xl [transform-style:preserve-3d]"
+              initial={{ rotateY: 180 }}
               animate={{
                 rotateY: 0,
-                opacity: 1,
                 boxShadow: flash ? GLOW[flash.tone] : '0 25px 50px -20px rgba(0,0,0,0.9)',
-                filter: killed ? 'grayscale(1) brightness(0.55)' : 'grayscale(0) brightness(1)',
               }}
               exit={{ opacity: 0, y: 40, scale: 0.85 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.8, ease: [0.2, 0.7, 0.2, 1] }}
             >
-              <img src={cardImage(monster.id)} alt={monsterName(monster.id)} className="size-full object-cover" />
-              {hit && (
-                <motion.div
-                  key={flash?.key}
-                  className="absolute inset-0 bg-[radial-gradient(circle,rgba(229,72,77,0.65)_0%,transparent_70%)]"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 1, 0] }}
-                  transition={{ duration: 0.7 }}
-                />
-              )}
-              {hit && <Slash flashKey={flash?.key ?? 0} />}
-              {killed && (
-                <motion.div
-                  className="absolute inset-0 grid place-items-center"
-                  initial={{ scale: 2, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', damping: 12 }}
-                >
-                  <Skull className="size-[40%] text-ink drop-shadow-[0_0_20px_rgba(0,0,0,0.9)]" />
-                </motion.div>
-              )}
-              <Badges monster={monster} pending={pending} nameOf={nameOf} />
+              {/* Face : l'illustration et ses effets */}
+              <motion.div
+                className={cx(
+                  'absolute inset-0 overflow-hidden rounded-2xl [backface-visibility:hidden]',
+                  hit && 'animate-shake',
+                )}
+                animate={{ filter: killed ? 'grayscale(1) brightness(0.55)' : 'grayscale(0) brightness(1)' }}
+                transition={{ duration: 0.5 }}
+              >
+                <img src={cardImage(monster.id)} alt={monsterName(monster.id)} className="size-full object-cover" />
+                <MonsterEffects monster={monster} pending={pending} />
+                {hit && (
+                  <motion.div
+                    key={flash?.key}
+                    className="absolute inset-0 bg-[radial-gradient(circle,rgba(229,72,77,0.65)_0%,transparent_70%)]"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 1, 0] }}
+                    transition={{ duration: 0.7 }}
+                  />
+                )}
+                {hit && <Slash flashKey={flash?.key ?? 0} />}
+                {killed && (
+                  <motion.div
+                    className="absolute inset-0 grid place-items-center"
+                    initial={{ scale: 2, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', damping: 12 }}
+                  >
+                    <Skull className="size-[40%] text-ink drop-shadow-[0_0_20px_rgba(0,0,0,0.9)]" />
+                  </motion.div>
+                )}
+                <Badges monster={monster} pending={pending} nameOf={nameOf} />
+              </motion.div>
+              {/* Dos : visible pendant le retournement d'un monstre qui surgit */}
+              <div className="absolute inset-0 overflow-hidden rounded-2xl [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                <CardBack className="size-full" />
+              </div>
             </motion.div>
           ) : (
             <motion.div
@@ -118,6 +134,8 @@ function StageCard({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {killed && flash && <Embers burstKey={flash.key} />}
 
         {/* Pas d'animation de sortie : le texte est remplacé dès l'image suivante, sans jamais s'empiler. */}
         {flash?.label && (
@@ -137,7 +155,7 @@ function StageCard({
       </div>
 
       <div className="mt-4 text-center">
-        <p className="font-display text-[1.6vw] font-semibold tracking-wide">
+        <p className="font-display text-[1.5vw] leading-tight font-semibold tracking-wide text-balance">
           {monster ? monsterName(monster.id) : '—'}
         </p>
         {monster && (

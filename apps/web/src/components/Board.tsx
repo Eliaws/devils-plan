@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { cardImage, monsterName, SLOT_LABELS } from '../game/cards.ts';
 import type { Tone } from '../game/describe.ts';
 import { cx } from '../ui/primitives.tsx';
+import { MonsterEffects } from './effects/MonsterEffects.tsx';
 
 export interface SlotFlash {
   /** Change à chaque événement pour relancer l'animation. */
@@ -119,6 +120,7 @@ function MonsterSlot({
           )}
         </AnimatePresence>
 
+        {monster && <MonsterEffects monster={monster} pending={pending} compact />}
         {monster && <StatusBadges monster={monster} pending={pending} large={large} nameOf={nameOf} />}
 
         {mark && (

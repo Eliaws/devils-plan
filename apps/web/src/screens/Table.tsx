@@ -3,6 +3,7 @@ import { type Reaction, type RoomSnapshot, TEAMS } from '@umbra/protocol';
 import { Crown } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
+import { DeckPile } from '../components/effects/CardBack.tsx';
 import { Leaderboard, sideColor } from '../components/table/Leaderboard.tsx';
 import { MonsterStage } from '../components/table/MonsterStage.tsx';
 import { PlayerTokens } from '../components/table/PlayerTokens.tsx';
@@ -58,9 +59,7 @@ function TableGame({ room, frame, reactions }: { room: RoomSnapshot; frame: Fram
         <span className="rounded-full border border-line bg-surface/70 px-4 py-1.5 font-display text-lg tracking-wide">
           Manche {view.round}
         </span>
-        <span className="text-muted">
-          {CARD_SET_LABELS[view.cardSet].name} · {view.monsterDeckCount} monstre(s) tapi(s) dans l'ombre
-        </span>
+        <span className="text-muted">{CARD_SET_LABELS[view.cardSet].name}</span>
         <JoinBadge code={room.code} />
       </header>
 
@@ -84,7 +83,11 @@ function TableGame({ room, frame, reactions }: { room: RoomSnapshot; frame: Fram
           </div>
         </div>
         <aside className="flex min-h-0 flex-col gap-3">
-          <h2 className="font-display text-lg tracking-wide text-muted">Classement</h2>
+          <DeckPile
+            count={view.monsterDeckCount}
+            label={view.monsterDeckCount > 1 ? "monstres tapis dans l'ombre" : "monstre tapi dans l'ombre"}
+          />
+          <h2 className="mt-4 font-display text-lg tracking-wide text-muted">Classement</h2>
           <Leaderboard view={view} />
         </aside>
       </section>

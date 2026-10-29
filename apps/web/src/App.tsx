@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { type ReactNode, useEffect } from 'react';
+import { lazy, type ReactNode, Suspense, useEffect } from 'react';
 import { actions, useStore } from './net/store.ts';
 import { navigate, paths, useRoute } from './router.ts';
 import { Home } from './screens/Home.tsx';
@@ -8,6 +8,11 @@ import { PlayerGame } from './screens/PlayerGame.tsx';
 import { Table } from './screens/Table.tsx';
 import { Button } from './ui/primitives.tsx';
 
+// Galerie des effets : développement uniquement, absente du site compilé.
+const EffectsGallery = import.meta.env.DEV
+  ? lazy(() => import('./screens/EffectsGallery.tsx').then((m) => ({ default: m.EffectsGallery })))
+  : null;
+
 export function App() {
   const route = useRoute();
   return (
@@ -15,6 +20,11 @@ export function App() {
       {route.name === 'home' && <Home initialCode={route.code} />}
       {route.name === 'play' && <PlayRoute code={route.code} />}
       {route.name === 'table' && <TableRoute code={route.code} />}
+      {route.name === 'gallery' && EffectsGallery && (
+        <Suspense fallback={<Loading />}>
+          <EffectsGallery />
+        </Suspense>
+      )}
       {route.name === 'notFound' && (
         <Centered>
           <p className="text-muted">Page introuvable.</p>
