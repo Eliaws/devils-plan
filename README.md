@@ -59,7 +59,7 @@ Le jeu s'installe comme une application, sans store : bouton « Installer l'appl
 - **iPhone / iPad** : Apple n'autorise pas cette fenêtre ; le bouton affiche l'aide « Partager → Sur l'écran d'accueil ».
 - Le bouton n'apparaît pas si le jeu est déjà installé, ni sur les navigateurs qui ne savent pas installer d'application.
 
-Le service worker (généré au build par `vite-plugin-pwa`, absent en développement) met en cache le code et les illustrations ; la page elle-même vient toujours du réseau, donc une mise à jour du jeu est prise en compte au rechargement suivant.
+Le service worker (généré au build par `vite-plugin-pwa`, absent en développement) met en cache le code et les illustrations ; la page elle-même vient toujours du réseau, donc une mise à jour du jeu est prise en compte au rechargement suivant. Au démarrage et à chaque retour sur l'application, le site compare sa version à celle du serveur (`/version`) et se recharge une fois s'il est resté sur une ancienne version.
 
 Vérifications :
 

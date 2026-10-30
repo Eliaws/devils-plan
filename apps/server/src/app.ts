@@ -24,6 +24,9 @@ export function createApp(options: { webDist?: string; gifs?: GifProvider | null
           setHeaders: (res, pathname) => {
             // Les fichiers de /assets ont un nom unique à chaque build : cache illimité.
             if (pathname.startsWith('/assets/')) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            // Le reste (page, service worker, manifeste) est revérifié à chaque fois :
+            // c'est ainsi que les téléphones découvrent une nouvelle version.
+            else res.setHeader('Cache-Control', 'no-cache');
           },
         })
       : null;
