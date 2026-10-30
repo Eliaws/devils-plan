@@ -2,6 +2,7 @@ import { MAX_NAME_LENGTH, ROOM_CODE_LENGTH } from '@umbra/protocol';
 import { Tv } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import { actions, lastName, useStore } from '../net/store.ts';
+import { InstallButton } from '../pwa/InstallButton.tsx';
 import { navigate, paths } from '../router.ts';
 import { Eclipse } from '../ui/brand.tsx';
 import { Button } from '../ui/primitives.tsx';
@@ -105,7 +106,8 @@ export function Home({ initialCode }: { initialCode?: string | undefined }) {
         )}
       </form>
 
-      <footer className="mt-auto pt-12 text-center">
+      <footer className="mt-auto flex flex-col items-center gap-6 pt-12 text-center">
+        <InstallButton />
         <button
           type="button"
           onClick={createTable}

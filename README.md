@@ -46,6 +46,15 @@ npm run dev
 - Galerie des effets visuels (développement uniquement) : http://localhost:5173/dev/effets
 - Les icônes de l'application installable sont générées avec `npm run icons -w @umbra/web`.
 
+### Application installable (PWA)
+
+Le jeu s'installe comme une application, sans store : bouton « Installer l'application » sur l'accueil.
+- **Android (Chrome, Edge, Samsung Internet)** : le bouton ouvre la fenêtre d'installation du navigateur.
+- **iPhone / iPad** : Apple n'autorise pas cette fenêtre ; le bouton affiche l'aide « Partager → Sur l'écran d'accueil ».
+- Le bouton n'apparaît pas si le jeu est déjà installé, ni sur les navigateurs qui ne savent pas installer d'application.
+
+Le service worker (généré au build par `vite-plugin-pwa`, absent en développement) met en cache le code et les illustrations ; la page elle-même vient toujours du réseau, donc une mise à jour du jeu est prise en compte au rechargement suivant.
+
 Vérifications :
 
 ```bash

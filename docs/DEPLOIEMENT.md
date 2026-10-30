@@ -94,6 +94,10 @@ server {
 
 Les en-têtes `Upgrade` et `Connection` sont indispensables pour les WebSockets. Le certificat HTTPS s'ajoute avec certbot (`sudo certbot --nginx`).
 
+### Application installable
+
+L'installation sur téléphone exige le **HTTPS** (fourni par Caddy, certbot ou Infomaniak). Si un proxy ajoute ses propres en-têtes de cache, il ne doit pas mettre en cache longtemps `/sw.js` ni `/index.html` : c'est par eux que les téléphones découvrent une nouvelle version.
+
 ## 4. Mettre à jour
 
 ```bash
