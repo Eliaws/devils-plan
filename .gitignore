@@ -7,3 +7,6 @@ coverage/
 .claude/
 # Parties sauvegardées par le serveur
 apps/server/data/
+
+# Secrets locaux (clé GIPHY…)
+.env

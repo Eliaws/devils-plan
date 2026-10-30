@@ -1,8 +1,16 @@
 import type { AddressInfo } from 'node:net';
-import type { ClientToServerEvents, GameUpdate, Result, RoomSnapshot, ServerToClientEvents } from '@umbra/protocol';
+import type {
+  ClientToServerEvents,
+  GameUpdate,
+  GifResult,
+  Result,
+  RoomSnapshot,
+  ServerToClientEvents,
+} from '@umbra/protocol';
 import { io as connect, type Socket } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { type App, createApp } from '../src/app.ts';
+import type { GifProvider } from '../src/giphy.ts';
 
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -10,8 +18,30 @@ let app: App;
 let url: string;
 const clients: Client[] = [];
 
+const chat: GifResult = {
+  id: 'abcd1234',
+  title: 'Chat surpris',
+  url: 'https://media.giphy.com/media/abcd1234/200.webp',
+  previewUrl: 'https://media.giphy.com/media/abcd1234/200w_d.webp',
+  width: 267,
+  height: 200,
+};
+
+/** Faux GIPHY : un seul GIF connu, et des recherches comptées. */
+const fakeGifs = {
+  searches: [] as string[],
+  async search(query: string) {
+    this.searches.push(query);
+    return { gifs: [chat], next: null };
+  },
+  async get(id: string) {
+    return id === chat.id ? chat : null;
+  },
+} satisfies GifProvider & { searches: string[] };
+
 beforeEach(async () => {
-  app = createApp();
+  fakeGifs.searches = [];
+  app = createApp({ gifs: fakeGifs });
   await new Promise<void>((resolve) => app.httpServer.listen(0, '127.0.0.1', resolve));
   url = `http://127.0.0.1:${(app.httpServer.address() as AddressInfo).port}`;
 });
@@ -124,6 +154,42 @@ describe('serveur Socket.IO', () => {
 
     await waitFor(() => received.length === 1);
     expect(received).toEqual(['Alice 🔥']);
+  });
+
+  it('cherche des GIF via le serveur et diffuse le GIF choisi, pas plus d’un toutes les 3 secondes', async () => {
+    const stranger = await client();
+    expect(await stranger.emitWithAck('gif:search', { query: 'chat' })).toMatchObject({
+      ok: false,
+      error: { code: 'NOT_IN_ROOM' },
+    });
+
+    const alice = await client();
+    const { code } = unwrap(await alice.emitWithAck('room:create'));
+    unwrap(await alice.emitWithAck('room:join', { code, name: 'Alice' }));
+    const table = await client();
+    unwrap(await table.emitWithAck('room:watch', { code }));
+    const received: GifResult[] = [];
+    table.on('room:reaction', (reaction) => {
+      if (reaction.payload.kind === 'gif') received.push(reaction.payload.gif);
+    });
+
+    expect(unwrap(await alice.emitWithAck('gif:search', { query: 'chat' })).gifs).toEqual([chat]);
+    expect(fakeGifs.searches).toEqual(['chat']);
+
+    const bob = await client();
+    unwrap(await bob.emitWithAck('room:join', { code, name: 'Bob' }));
+    const unknown = await bob.emitWithAck('game:react', { kind: 'gif', id: 'inconnu1' });
+    expect(unknown).toMatchObject({ ok: false, error: { code: 'UNKNOWN_GIF' } });
+
+    unwrap(await alice.emitWithAck('game:react', { kind: 'gif', id: chat.id }));
+    await waitFor(() => received.length === 1);
+    expect(received[0]).toEqual(chat);
+
+    // Même après le délai des émojis, un deuxième GIF doit attendre.
+    await new Promise((resolve) => setTimeout(resolve, 850));
+    const tooFast = await alice.emitWithAck('game:react', { kind: 'gif', id: chat.id });
+    expect(tooFast).toMatchObject({ ok: false, error: { code: 'TOO_FAST' } });
+    unwrap(await alice.emitWithAck('game:react', { kind: 'emoji', emoji: '🔥' }));
   });
 
   it('rend sa place à un joueur qui se reconnecte avec son jeton', async () => {

@@ -5,6 +5,7 @@ import { playerColor } from '../game/colors.ts';
 import { describe, type Line, makeNames, sideLabel, type Tone } from '../game/describe.ts';
 import { type PlayerStatus, playerStatus } from '../game/status.ts';
 import { cx } from '../ui/primitives.tsx';
+import { PlayerAvatar } from './avatars/PlayerAvatar.tsx';
 
 /** Ordre de passage (ou liste des joueurs avant la révélation des mises), avec l'avancement de chacun. */
 export function OrderStrip({ view, me, large = false }: { view: GameView; me: PlayerId | null; large?: boolean }) {
@@ -24,7 +25,7 @@ export function OrderStrip({ view, me, large = false }: { view: GameView; me: Pl
             playerStatus(view, p) === 'absent' && 'opacity-45',
           )}
         >
-          <span className="size-2 shrink-0 rounded-full" style={{ background: playerColor(view, p.id) }} aria-hidden />
+          <PlayerAvatar playerId={p.id} color={playerColor(view, p.id)} className={large ? 'size-8' : 'size-6'} />
           {view.order.includes(p.id) && <span className="text-xs text-muted tabular-nums">{index + 1}</span>}
           <span className="max-w-24 truncate">{p.id === me ? 'Toi' : p.name}</span>
           {view.revealedBids?.[p.id] !== undefined && view.phase === 'planning' && (

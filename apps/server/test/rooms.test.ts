@@ -74,6 +74,14 @@ describe('RoomManager', () => {
     expect(codeOf(() => manager.act(room, 'intrus', { type: 'bid', amount: 0 }))).toBe('NOT_IN_ROOM');
   });
 
+  it('attribue un portrait différent à chacun des 10 premiers joueurs, puis laisse en changer', () => {
+    const names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+    const { manager, room, members } = lobbyWith(...names);
+    expect(new Set(members.map((m) => m.avatar)).size).toBe(10);
+    manager.setAvatar(room, members[0]!.id, 'sire-poulet');
+    expect(manager.snapshot(room).players[0]!.avatar).toBe('sire-poulet');
+  });
+
   it('supprime les salons abandonnés', () => {
     const { manager, room, members } = lobbyWith('Alice');
     members[0]!.connections = 1;

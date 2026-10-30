@@ -4,11 +4,12 @@
 import type { CardSet, GameEvent, PlayerId } from '@umbra/engine';
 import type {
   Ack,
+  AvatarId,
   ClientToServerEvents,
   GameActionInput,
   GameUpdate,
   Reaction,
-  ReactionPayload,
+  ReactionInput,
   Result,
   RoomSnapshot,
   ServerToClientEvents,
@@ -180,12 +181,15 @@ socket.on('game:update', (update) => {
   });
 });
 
-/** Durée d'affichage d'une réaction sur l'écran principal. */
-export const REACTION_LIFETIME_MS = 3500;
+/** Durée d'affichage d'une réaction sur l'écran principal (un GIF reste un peu plus longtemps). */
+export const REACTION_LIFETIME_MS = { emoji: 3500, gif: 4500 } as const;
 
 socket.on('room:reaction', (reaction) => {
   set((s) => ({ reactions: [...s.reactions.slice(-30), reaction] }));
-  setTimeout(() => set((s) => ({ reactions: s.reactions.filter((r) => r.id !== reaction.id) })), REACTION_LIFETIME_MS);
+  setTimeout(
+    () => set((s) => ({ reactions: s.reactions.filter((r) => r.id !== reaction.id) })),
+    REACTION_LIFETIME_MS[reaction.payload.kind],
+  );
 });
 
 socket.on('room:closed', (reason) => {
@@ -254,6 +258,7 @@ export const actions = {
     }),
 
   setTeam: (teamId: TeamId | null) => attempt(() => request('lobby:team', { teamId })),
+  setAvatar: (avatar: AvatarId) => attempt(() => request('lobby:avatar', { avatar })),
   setCardSet: (cardSet: CardSet) => attempt(() => request('lobby:settings', { cardSet })),
   setTurnSeconds: (turnSeconds: TurnDuration | null) => attempt(() => request('lobby:settings', { turnSeconds })),
   /** Hôte : jouer le coup par défaut à la place d'un joueur. */
@@ -263,5 +268,9 @@ export const actions = {
   restart: () => attempt(() => request('game:restart')),
   ready: () => attempt(() => request('game:action', { type: 'ready' })),
   /** Les réactions trop rapprochées sont simplement ignorées (pas de message d'erreur). */
-  react: (payload: ReactionPayload) => request('game:react', payload).catch(() => {}),
+  react: (input: ReactionInput) => request('game:react', input).catch(() => {}),
+  /** Un GIF, lui, affiche son erreur (trop rapide, GIF indisponibles…). */
+  sendGif: (id: string) => attempt(() => request('game:react', { kind: 'gif', id })),
+  /** Recherche via le serveur (tendances si `query` est vide). Lève une erreur en cas d'échec. */
+  searchGifs: (query: string, offset = 0) => request('gif:search', { query, offset }),
 };

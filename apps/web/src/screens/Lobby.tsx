@@ -1,8 +1,9 @@
 import { CARD_SETS, MIN_PLAYERS, TEAM_MODE_MIN_PLAYERS } from '@umbra/engine';
-import { type RoomSnapshot, TEAMS, TURN_DURATIONS } from '@umbra/protocol';
+import { AVATARS, type RoomSnapshot, TEAMS, TURN_DURATIONS } from '@umbra/protocol';
 import { Check, Copy, Crown, QrCode, Share2, Tv } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useState } from 'react';
+import { Avatar, avatarName } from '../components/avatars/Avatar.tsx';
 import { CARD_SET_LABELS } from '../game/cards.ts';
 import { actions } from '../net/store.ts';
 import { navigate, paths } from '../router.ts';
@@ -57,6 +58,32 @@ export function Lobby({ room, playerId }: { room: RoomSnapshot; playerId: string
         </div>
       </header>
 
+      {me && (
+        <section className="mt-6">
+          <h2 className="mb-2 flex items-baseline justify-between text-sm text-muted">
+            <span>Ton chasseur</span>
+            <span className="text-ink">{avatarName(me.avatar)}</span>
+          </h2>
+          <fieldset className="grid min-w-0 grid-cols-5 gap-2" aria-label="Choisir son portrait">
+            {AVATARS.map((avatar) => {
+              const selected = me.avatar === avatar.id;
+              return (
+                <button
+                  key={avatar.id}
+                  type="button"
+                  aria-pressed={selected}
+                  aria-label={avatar.name}
+                  onClick={() => actions.setAvatar(avatar.id)}
+                  className={cx('rounded-full transition active:scale-95', !selected && 'opacity-60 hover:opacity-100')}
+                >
+                  <Avatar id={avatar.id} color={selected ? '#e3ac52' : '#2a2a37'} className="w-full" />
+                </button>
+              );
+            })}
+          </fieldset>
+        </section>
+      )}
+
       <section className="mt-6">
         <h2 className="mb-2 flex items-baseline justify-between text-sm text-muted">
           <span>Chasseurs</span>
@@ -65,7 +92,12 @@ export function Lobby({ room, playerId }: { room: RoomSnapshot; playerId: string
         <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
           {room.players.map((p) => (
             <li key={p.id} className="flex items-center gap-3 px-4 py-3">
-              <Presence online={p.connected} />
+              <span className="relative shrink-0">
+                <Avatar id={p.avatar} className="size-10" color="#2a2a37" />
+                <span className="absolute -right-0.5 -bottom-0.5 rounded-full bg-surface p-0.5">
+                  <Presence online={p.connected} />
+                </span>
+              </span>
               <span className={cx('flex-1 truncate', p.id === playerId && 'font-semibold')}>
                 {p.name}
                 {p.id === playerId && <span className="text-muted"> (toi)</span>}

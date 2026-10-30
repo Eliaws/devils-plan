@@ -3,6 +3,7 @@
 
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.ts';
+import { createGiphy } from './giphy.ts';
 import { createSaver, loadRooms, saveRooms } from './persistence.ts';
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -13,6 +14,7 @@ const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 
 const { httpServer, io, manager, servesWeb } = createApp({
   webDist: fileURLToPath(new URL('../../web/dist', import.meta.url)),
+  gifs: createGiphy(process.env.GIPHY_API_KEY),
 });
 
 const restored = loadRooms(DATA_FILE);
@@ -24,7 +26,8 @@ setInterval(() => manager.cleanup(), CLEANUP_INTERVAL_MS).unref();
 
 httpServer.listen(PORT, HOST, () => {
   const parties = restored.length > 0 ? ` · ${restored.length} partie(s) restaurée(s)` : '';
-  console.log(`Umbra : http://localhost:${PORT}${servesWeb ? '' : ' (API seule, front non compilé)'}${parties}`);
+  const gifs = process.env.GIPHY_API_KEY ? ' · GIF activés' : ' · GIF désactivés (pas de GIPHY_API_KEY)';
+  console.log(`Umbra : http://localhost:${PORT}${servesWeb ? '' : ' (API seule, front non compilé)'}${parties}${gifs}`);
 });
 
 const shutdown = () => {

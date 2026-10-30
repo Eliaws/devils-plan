@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "PORT=3000 node --watch src/index.ts",
-    "start": "NODE_ENV=production node src/index.ts",
+    "dev": "PORT=3000 node --env-file-if-exists=.env --watch src/index.ts",
+    "start": "NODE_ENV=production node --env-file-if-exists=.env src/index.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "bots": "node scripts/bots.ts"

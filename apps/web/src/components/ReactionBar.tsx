@@ -1,11 +1,14 @@
 import { EMOJI_REACTIONS, type EmojiReaction } from '@umbra/protocol';
 import { motion } from 'motion/react';
 import { useState } from 'react';
-import { actions } from '../net/store.ts';
+import { actions, useStore } from '../net/store.ts';
+import { GifPicker } from './GifPicker.tsx';
 
-/** Rangée d'émojis à envoyer sur l'écran principal. */
+/** Rangée d'émojis à envoyer sur l'écran principal, et GIF si le serveur les permet. */
 export function ReactionBar() {
   const [last, setLast] = useState<{ emoji: EmojiReaction; key: number } | null>(null);
+  const [gifOpen, setGifOpen] = useState(false);
+  const gifs = useStore((s) => s.room?.gifs ?? false);
 
   const send = (emoji: EmojiReaction) => {
     navigator.vibrate?.(12);
@@ -15,7 +18,18 @@ export function ReactionBar() {
 
   return (
     <div>
-      <p className="mb-2 text-sm text-muted">Réagis sur l'écran principal</p>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-sm text-muted">Réagis sur l'écran principal</p>
+        {gifs && (
+          <button
+            type="button"
+            onClick={() => setGifOpen(true)}
+            className="rounded-lg border border-gold/40 bg-gold/10 px-2.5 py-1 text-xs font-bold tracking-wider text-gold transition active:scale-95"
+          >
+            GIF
+          </button>
+        )}
+      </div>
       <div className="grid grid-cols-8 gap-1.5">
         {EMOJI_REACTIONS.map((emoji) => (
           <motion.button
@@ -42,6 +56,7 @@ export function ReactionBar() {
           </motion.button>
         ))}
       </div>
+      {gifs && <GifPicker open={gifOpen} onClose={() => setGifOpen(false)} />}
     </div>
   );
 }

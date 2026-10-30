@@ -2,7 +2,9 @@
 
 import type { MonsterId, MonsterView, PendingEffect } from '@umbra/engine';
 import { MONSTERS } from '@umbra/engine';
+import { AVATARS } from '@umbra/protocol';
 import { useState } from 'react';
+import { Avatar } from '../components/avatars/Avatar.tsx';
 import { CardBack, DeckPile } from '../components/effects/CardBack.tsx';
 import { Embers } from '../components/effects/Embers.tsx';
 import { MonsterEffects } from '../components/effects/MonsterEffects.tsx';
@@ -47,6 +49,16 @@ export function EffectsGallery() {
     <main className="min-h-dvh px-8 py-8">
       <Logo size="sm" />
       <h1 className="mt-6 font-display text-3xl font-bold">Galerie des effets</h1>
+
+      <h2 className="mt-8 text-sm text-muted">Portraits de chasseurs</h2>
+      <section className="mt-3 grid grid-cols-5 gap-6">
+        {AVATARS.map((avatar, i) => (
+          <figure key={avatar.id} className="flex flex-col items-center gap-2">
+            <Avatar id={avatar.id} color={i % 2 ? '#5eb1ef' : '#e3ac52'} className="size-36" />
+            <figcaption className="text-center text-sm text-muted">{avatar.name}</figcaption>
+          </figure>
+        ))}
+      </section>
 
       <section className="mt-8 grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-8">
         {SAMPLES.map(({ title, monster: m, pending }) => (

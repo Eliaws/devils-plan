@@ -4,12 +4,17 @@
 import { randomUUID } from 'node:crypto';
 import { eventsFor, type GameEvent, type PlayerId, type Viewer, viewFor } from '@umbra/engine';
 import {
+  avatarInputSchema,
   type ClientToServerEvents,
   type ErrorPayload,
+  GIF_REACTION_COOLDOWN_MS,
   gameActionSchema,
+  gifSearchInputSchema,
   joinInputSchema,
   REACTION_COOLDOWN_MS,
+  type ReactionPayload,
   type Result,
+  type RoomSnapshot,
   reactionInputSchema,
   resumeInputSchema,
   type ServerToClientEvents,
@@ -20,6 +25,7 @@ import {
 } from '@umbra/protocol';
 import type { Server, Socket } from 'socket.io';
 import { ZodError } from 'zod';
+import { type GifProvider, GifUnavailableError } from './giphy.ts';
 import { type Member, type Room, RoomError, type RoomManager } from './rooms.ts';
 
 interface SocketData {
@@ -27,16 +33,23 @@ interface SocketData {
   /** null pour un écran « Table ». */
   playerId: PlayerId | null;
   lastReactionAt: number;
+  lastGifAt: number;
+  lastGifSearchAt: number;
 }
+
+/** Délai minimal entre deux recherches de GIF d'un même téléphone (la saisie est déjà temporisée). */
+const GIF_SEARCH_INTERVAL_MS = 250;
 
 export type GameServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 type GameSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 
 const channel = (code: string) => `room:${code}`;
 
-export function attachGameServer(io: GameServer, manager: RoomManager): void {
+export function attachGameServer(io: GameServer, manager: RoomManager, gifs: GifProvider | null = null): void {
+  const snapshot = (room: Room): RoomSnapshot => ({ ...manager.snapshot(room), gifs: gifs !== null });
+
   const broadcastRoom = (room: Room) => {
-    io.to(channel(room.code)).emit('room:update', manager.snapshot(room));
+    io.to(channel(room.code)).emit('room:update', snapshot(room));
   };
 
   const viewerOf = (socket: GameSocket): Viewer =>
@@ -96,6 +109,11 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
     sendGame(socket, room, [], true);
   };
 
+  const requireGifs = (): GifProvider => {
+    if (!gifs) throw new RoomError('GIFS_DISABLED', 'Les GIF ne sont pas activés sur ce serveur.');
+    return gifs;
+  };
+
   /** Contexte du joueur courant, ou erreur s'il n'a pas rejoint de partie. */
   const current = (socket: GameSocket): { room: Room; playerId: PlayerId } => {
     const { code, playerId } = socket.data;
@@ -104,7 +122,7 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
   };
 
   io.on('connection', (socket) => {
-    socket.data = { code: null, playerId: null, lastReactionAt: 0 };
+    socket.data = { code: null, playerId: null, lastReactionAt: 0, lastGifAt: 0, lastGifSearchAt: 0 };
 
     socket.on('room:create', (ack) => {
       handle(ack, () => ({ code: manager.createRoom().code }));
@@ -138,7 +156,7 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
         socket.data.code = code;
         manager.setTableConnected(room, 1);
         void socket.join(channel(code));
-        socket.emit('room:update', manager.snapshot(room));
+        socket.emit('room:update', snapshot(room));
         sendGame(socket, room, []);
         return null;
       });
@@ -158,6 +176,16 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
         const { teamId } = teamInputSchema.parse(input);
         const { room, playerId } = current(socket);
         manager.setTeam(room, playerId, teamId);
+        broadcastRoom(room);
+        return null;
+      });
+    });
+
+    socket.on('lobby:avatar', (input, ack) => {
+      handle(ack, () => {
+        const { avatar } = avatarInputSchema.parse(input);
+        const { room, playerId } = current(socket);
+        manager.setAvatar(room, playerId, avatar);
         broadcastRoom(room);
         return null;
       });
@@ -216,14 +244,26 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
     });
 
     socket.on('game:react', (input, ack) => {
-      handle(ack, () => {
-        const payload = reactionInputSchema.parse(input);
+      handleAsync(ack, async () => {
+        const reaction = reactionInputSchema.parse(input);
         const { room, playerId } = current(socket);
         const now = Date.now();
         if (now - socket.data.lastReactionAt < REACTION_COOLDOWN_MS) {
           throw new RoomError('TOO_FAST', 'Doucement, une réaction à la fois !');
         }
+        if (reaction.kind === 'gif' && now - socket.data.lastGifAt < GIF_REACTION_COOLDOWN_MS) {
+          throw new RoomError('TOO_FAST', 'Un GIF toutes les quelques secondes !');
+        }
         socket.data.lastReactionAt = now;
+        let payload: ReactionPayload;
+        if (reaction.kind === 'gif') {
+          socket.data.lastGifAt = now;
+          const gif = await requireGifs().get(reaction.id);
+          if (!gif) throw new RoomError('UNKNOWN_GIF', 'GIF introuvable.');
+          payload = { kind: 'gif', gif };
+        } else {
+          payload = reaction;
+        }
         const member = manager.requireMember(room, playerId);
         io.to(channel(room.code)).emit('room:reaction', {
           id: randomUUID(),
@@ -232,6 +272,19 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
           payload,
         });
         return null;
+      });
+    });
+
+    socket.on('gif:search', (input, ack) => {
+      handleAsync(ack, async () => {
+        const { query, offset } = gifSearchInputSchema.parse(input);
+        current(socket);
+        const now = Date.now();
+        if (now - socket.data.lastGifSearchAt < GIF_SEARCH_INTERVAL_MS) {
+          throw new RoomError('TOO_FAST', 'Recherche trop rapide.');
+        }
+        socket.data.lastGifSearchAt = now;
+        return requireGifs().search(query, offset);
       });
     });
 
@@ -250,8 +303,24 @@ function handle<T>(ack: unknown, fn: () => T): void {
   if (typeof ack === 'function') ack(result);
 }
 
+/** Variante asynchrone de `handle`. */
+function handleAsync<T>(ack: unknown, fn: () => Promise<T>): void {
+  fn().then(
+    (data) => {
+      if (typeof ack === 'function') ack({ ok: true, data } satisfies Result<T>);
+    },
+    (error: unknown) => {
+      if (typeof ack === 'function') ack({ ok: false, error: toErrorPayload(error) } satisfies Result<T>);
+    },
+  );
+}
+
 function toErrorPayload(error: unknown): ErrorPayload {
   if (error instanceof RoomError) return { code: error.code, message: error.message };
+  if (error instanceof GifUnavailableError) {
+    console.warn(`GIF : ${error.message}`);
+    return { code: 'GIFS_UNAVAILABLE', message: 'GIF indisponibles pour le moment.' };
+  }
   if (error instanceof ZodError) {
     return { code: 'INVALID_INPUT', message: error.issues[0]?.message ?? 'Données invalides.' };
   }

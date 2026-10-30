@@ -34,6 +34,7 @@ sudo apt install nodejs
 
 ```bash
 npm install
+cp apps/server/.env.example apps/server/.env   # puis renseigner GIPHY_API_KEY (facultatif)
 npm run dev
 ```
 
@@ -45,6 +46,11 @@ npm run dev
 - Les illustrations sont converties de `assets/` (PNG) en WebP légers avec `npm run cards -w @umbra/web`.
 - Galerie des effets visuels (développement uniquement) : http://localhost:5173/dev/effets
 - Les icônes de l'application installable sont générées avec `npm run icons -w @umbra/web`.
+
+### Portraits et GIF
+
+- Chaque joueur choisit son **portrait de chasseur** dans le lobby, parmi 10 dessins SVG (de « La Traqueuse » à « Sire Poulet ») ; il s'affiche sur les jetons de l'écran principal et dans l'ordre de passage. Le portrait est un simple identifiant (`AVATARS` dans `packages/protocol`), ce qui laisse la place à une photo importée plus tard.
+- Les joueurs peuvent envoyer des **GIF** (bouton « GIF » à côté des émojis) qui s'affichent au-dessus de leur jeton sur l'écran principal. La recherche passe par le serveur : la clé GIPHY se met dans `apps/server/.env` (`GIPHY_API_KEY=…`), **jamais dans le code ni dans git** ; les téléphones ne la voient pas. Sans clé, le bouton GIF n'apparaît pas.
 
 ### Application installable (PWA)
 

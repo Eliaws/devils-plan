@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { createServer, type Server as HttpServer, type RequestListener } from 'node:http';
 import sirv from 'sirv';
 import { Server } from 'socket.io';
+import type { GifProvider } from './giphy.ts';
 import { RoomManager } from './rooms.ts';
 import { attachGameServer, type GameServer } from './socket.ts';
 
@@ -14,7 +15,7 @@ export interface App {
 }
 
 /** Serveur HTTP (site compilé + /health) et Socket.IO sur le même port. */
-export function createApp(options: { webDist?: string } = {}): App {
+export function createApp(options: { webDist?: string; gifs?: GifProvider | null } = {}): App {
   const serveWeb =
     options.webDist && existsSync(options.webDist)
       ? sirv(options.webDist, {
@@ -46,6 +47,6 @@ export function createApp(options: { webDist?: string } = {}): App {
   const httpServer = createServer(handler);
   const io: GameServer = new Server(httpServer, { serveClient: false });
   const manager = new RoomManager();
-  attachGameServer(io, manager);
+  attachGameServer(io, manager, options.gifs ?? null);
   return { httpServer, io, manager, servesWeb: serveWeb !== null };
 }

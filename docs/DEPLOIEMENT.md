@@ -30,6 +30,9 @@ Variables d'environnement :
 | `PORT` | `3000` | Port d'écoute |
 | `HOST` | `0.0.0.0` | Interface d'écoute (`127.0.0.1` si seul le proxy doit y accéder) |
 | `DATA_FILE` | `apps/server/data/rooms.json` | Sauvegarde des parties en cours |
+| `GIPHY_API_KEY` | *(aucune)* | Clé GIPHY pour les réactions en GIF ; sans elle, les GIF sont désactivés |
+
+Les variables peuvent aussi être placées dans `apps/server/.env` (lu au démarrage par `npm start`, modèle dans `apps/server/.env.example`). C'est l'endroit conseillé pour la clé GIPHY : ce fichier est ignoré par git, ne le commite jamais, et protège-le (`chmod 600 apps/server/.env`). Sur Infomaniak, crée ce fichier sur le serveur (SSH ou gestionnaire de fichiers), ou déclare la variable dans les variables d'environnement du site Node.js. Au démarrage, le journal indique « GIF activés » ou « GIF désactivés ».
 
 Les parties en cours sont **sauvegardées sur disque** (au plus une écriture par seconde) et rechargées au démarrage : un redémarrage ou une mise à jour ne les efface plus, les joueurs retrouvent leur place en rechargeant la page. Le dossier de sauvegarde doit rester en place d'un déploiement à l'autre (il est ignoré par git).
 
@@ -47,6 +50,7 @@ Type=simple
 User=umbra
 WorkingDirectory=/home/umbra/umbra
 Environment=NODE_ENV=production PORT=3000 HOST=127.0.0.1
+EnvironmentFile=-/home/umbra/umbra/apps/server/.env
 ExecStart=/usr/bin/node apps/server/src/index.ts
 Restart=on-failure
 

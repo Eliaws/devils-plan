@@ -3,12 +3,14 @@ import { type Reaction, type RoomSnapshot, TEAMS } from '@umbra/protocol';
 import { Crown } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
+import { Avatar } from '../components/avatars/Avatar.tsx';
+import { PlayerAvatar } from '../components/avatars/PlayerAvatar.tsx';
 import { DeckPile } from '../components/effects/CardBack.tsx';
 import { Leaderboard, sideColor } from '../components/table/Leaderboard.tsx';
 import { MonsterStage } from '../components/table/MonsterStage.tsx';
 import { PlayerTokens } from '../components/table/PlayerTokens.tsx';
 import { CARD_SET_LABELS, cardImage } from '../game/cards.ts';
-import { initials, playerColor } from '../game/colors.ts';
+import { playerColor } from '../game/colors.ts';
 import { makeNames, sideLabel } from '../game/describe.ts';
 import { useCountdown, useWakeLock } from '../game/hooks.ts';
 import { type Frame, usePlayback } from '../game/playback.ts';
@@ -129,14 +131,7 @@ function Caption({
       exit={{ opacity: 0, y: -16 }}
       transition={{ duration: 0.25 }}
     >
-      {actor && (
-        <span
-          className="grid size-14 shrink-0 place-items-center rounded-full font-display text-xl font-bold text-bg"
-          style={{ background: playerColor(view, actor.id) }}
-        >
-          {initials(actor.name)}
-        </span>
-      )}
+      {actor && <PlayerAvatar playerId={actor.id} color={playerColor(view, actor.id)} className="size-16 shrink-0" />}
       <p className="font-display text-[2.1vw] leading-tight font-semibold">{text}</p>
       {cards.map((card, index) => (
         <motion.img
@@ -263,12 +258,7 @@ function TableLobby({ room }: { room: RoomSnapshot }) {
                 transition={{ type: 'spring', damping: 14 }}
                 className="flex flex-col items-center gap-2"
               >
-                <span
-                  className="grid size-16 place-items-center rounded-full font-display text-2xl font-bold text-bg"
-                  style={{ background: playerColor(room, p.id) }}
-                >
-                  {initials(p.name)}
-                </span>
+                <Avatar id={p.avatar} color={playerColor(room, p.id)} className="size-20" />
                 <span className="max-w-full truncate text-lg">{p.name}</span>
                 {p.teamId && (
                   <span className="-mt-1 text-sm text-muted">{TEAMS.find((t) => t.id === p.teamId)?.name}</span>

@@ -17,6 +17,8 @@ import {
   waitingPlayers,
 } from '@umbra/engine';
 import {
+  AVATARS,
+  type AvatarId,
   type GameActionInput,
   ROOM_CODE_ALPHABET,
   ROOM_CODE_LENGTH,
@@ -43,6 +45,7 @@ export interface Member {
   token: string;
   name: string;
   teamId: TeamId | null;
+  avatar: AvatarId;
   /** Nombre d'onglets connectés pour ce joueur. */
   connections: number;
 }
@@ -75,6 +78,14 @@ export interface Room {
 export const ROOM_TTL_MS = 30 * 60 * 1000;
 /** Quand seuls des joueurs déconnectés restent à jouer, on les attend ce temps-là. */
 export const ABSENT_GRACE_MS = 20 * 1000;
+
+/** Un portrait que personne n'a encore dans le salon (au hasard), ou n'importe lequel si tous sont pris. */
+function freeAvatar(room: Room): AvatarId {
+  const taken = new Set(room.members.map((m) => m.avatar));
+  const free = AVATARS.filter((a) => !taken.has(a.id));
+  const pool = free.length > 0 ? free : AVATARS;
+  return pool[randomInt(pool.length)]!.id;
+}
 
 const DEFAULT_SETTINGS: RoomSettings = { cardSet: DEFAULT_CARD_SET, turnSeconds: null };
 
@@ -120,7 +131,10 @@ export class RoomManager {
       room.deadline = null;
       room.phaseKey = null;
       room.settings = { ...DEFAULT_SETTINGS, ...room.settings };
-      for (const member of room.members) member.connections = 0;
+      for (const member of room.members) {
+        member.connections = 0;
+        member.avatar ??= freeAvatar(room);
+      }
       // Parties sauvegardées avant la gestion des absents.
       if (room.game) {
         room.game.absent ??= [];
@@ -144,7 +158,14 @@ export class RoomManager {
     if (room.members.some((m) => m.name.toLocaleLowerCase('fr') === name.toLocaleLowerCase('fr'))) {
       throw new RoomError('NAME_TAKEN', `Le pseudo « ${name} » est déjà pris.`);
     }
-    const member: Member = { id: randomUUID().slice(0, 8), token: randomUUID(), name, teamId: null, connections: 0 };
+    const member: Member = {
+      id: randomUUID().slice(0, 8),
+      token: randomUUID(),
+      name,
+      teamId: null,
+      avatar: freeAvatar(room),
+      connections: 0,
+    };
     room.members.push(member);
     room.hostId ??= member.id;
     this.touch(room);
@@ -186,6 +207,12 @@ export class RoomManager {
       throw new RoomError('GAME_IN_PROGRESS', 'Impossible de quitter une partie en cours.');
     room.members = room.members.filter((m) => m.id !== playerId);
     if (room.hostId === playerId) room.hostId = room.members[0]?.id ?? null;
+    this.touch(room);
+  }
+
+  /** Changer de portrait : possible à tout moment, plusieurs joueurs peuvent avoir le même. */
+  setAvatar(room: Room, playerId: PlayerId, avatar: AvatarId): void {
+    this.requireMember(room, playerId).avatar = avatar;
     this.touch(room);
   }
 
@@ -253,13 +280,19 @@ export class RoomManager {
     this.schedule(room);
   }
 
-  snapshot(room: Room, now = Date.now()): RoomSnapshot {
+  snapshot(room: Room, now = Date.now()): Omit<RoomSnapshot, 'gifs'> {
     return {
       code: room.code,
       status: room.status,
       settings: { ...room.settings },
       hostId: room.hostId,
-      players: room.members.map((m) => ({ id: m.id, name: m.name, teamId: m.teamId, connected: m.connections > 0 })),
+      players: room.members.map((m) => ({
+        id: m.id,
+        name: m.name,
+        avatar: m.avatar,
+        teamId: m.teamId,
+        connected: m.connections > 0,
+      })),
       timer: room.deadline ? { endsInMs: Math.max(0, room.deadline.at - now), reason: room.deadline.reason } : null,
     };
   }

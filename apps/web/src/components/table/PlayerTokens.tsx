@@ -2,9 +2,10 @@ import type { GameView, PlayerId } from '@umbra/engine';
 import type { Reaction } from '@umbra/protocol';
 import { Check, Coins } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { initials, playerColor } from '../../game/colors.ts';
+import { playerColor } from '../../game/colors.ts';
 import { playerStatus } from '../../game/status.ts';
 import { cx } from '../../ui/primitives.tsx';
+import { PlayerAvatar } from '../avatars/PlayerAvatar.tsx';
 import { orderedPlayers, StatusIcon } from '../GameInfo.tsx';
 
 /**
@@ -43,13 +44,10 @@ export function PlayerTokens({
             <ReactionStream reactions={reactions.filter((r) => r.playerId === player.id)} />
             <div className="relative">
               <div
-                className="grid size-[4.2vw] min-h-14 min-w-14 place-items-center rounded-full font-display text-[1.5vw] font-bold text-bg"
-                style={{
-                  background: `radial-gradient(circle at 35% 30%, ${color}, color-mix(in oklab, ${color} 55%, black))`,
-                  boxShadow: acting ? `0 0 0 3px #08080c, 0 0 0 6px ${color}, 0 0 40px ${color}` : 'none',
-                }}
+                className="size-[4.6vw] min-h-14 min-w-14 rounded-full"
+                style={{ boxShadow: acting ? `0 0 0 3px #08080c, 0 0 0 6px ${color}, 0 0 40px ${color}` : 'none' }}
               >
-                {initials(player.name)}
+                <PlayerAvatar playerId={player.id} color={color} className="size-full" />
               </div>
               {view.order.includes(player.id) && (
                 <span className="absolute -top-1 -left-1 grid size-6 place-items-center rounded-full border border-line bg-bg text-xs font-semibold tabular-nums">
@@ -89,9 +87,27 @@ export function PlayerTokens({
 
 function ReactionStream({ reactions }: { reactions: Reaction[] }) {
   return (
-    <div className="pointer-events-none absolute bottom-full left-1/2 h-0 w-0">
+    <div className="pointer-events-none absolute bottom-full left-1/2 z-10 h-0 w-0">
       <AnimatePresence>
         {reactions.map((reaction) => {
+          const { payload } = reaction;
+          if (payload.kind === 'gif') {
+            const { gif } = payload;
+            return (
+              <span key={reaction.id} className="absolute bottom-2 left-0 -translate-x-1/2">
+                <motion.span
+                  className="block overflow-hidden rounded-2xl border-2 border-white/15 bg-raised shadow-[0_12px_40px_rgba(0,0,0,0.8)]"
+                  style={{ height: 'clamp(110px, 13vw, 240px)', aspectRatio: `${gif.width} / ${gif.height}` }}
+                  initial={{ y: 30, opacity: 0, scale: 0.5, rotate: -4 }}
+                  animate={{ y: 0, opacity: 1, scale: 1, rotate: 0 }}
+                  exit={{ y: -40, opacity: 0, scale: 0.9 }}
+                  transition={{ type: 'spring', damping: 16, stiffness: 220 }}
+                >
+                  <img src={gif.url} alt={gif.title} className="size-full object-cover" />
+                </motion.span>
+              </span>
+            );
+          }
           const sway = reaction.id.charCodeAt(0) % 2 ? 28 : -28;
           return (
             <span key={reaction.id} className="absolute bottom-0 left-0 -translate-x-1/2">
@@ -102,7 +118,7 @@ function ReactionStream({ reactions }: { reactions: Reaction[] }) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 3.2, ease: 'easeOut' }}
               >
-                {reaction.payload.kind === 'emoji' ? reaction.payload.emoji : null}
+                {payload.emoji}
               </motion.span>
             </span>
           );

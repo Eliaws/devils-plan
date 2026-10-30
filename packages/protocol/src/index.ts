@@ -49,6 +49,26 @@ export const teamInputSchema = z.object({
   teamId: z.enum(TEAMS.map((t) => t.id) as [TeamId, ...TeamId[]]).nullable(),
 });
 
+// --- Portraits de chasseurs ---------------------------------------------------
+
+/** Portraits proposés aux joueurs, du plus sérieux au plus rigolo. */
+export const AVATARS = [
+  { id: 'traqueuse', name: 'La Traqueuse' },
+  { id: 'veteran', name: 'Le Vétéran' },
+  { id: 'inquisitrice', name: "L'Inquisitrice" },
+  { id: 'corbeau', name: 'Le Docteur Corbeau' },
+  { id: 'lame-rouge', name: 'La Lame Rouge' },
+  { id: 'chasseur-de-primes', name: 'Le Chasseur de primes' },
+  { id: 'mamie', name: "Mamie Gousse d'ail" },
+  { id: 'stagiaire', name: 'Le Stagiaire' },
+  { id: 'sire-poulet', name: 'Sire Poulet' },
+  { id: 'fantome', name: 'Le Fantôme repenti' },
+] as const;
+export type AvatarId = (typeof AVATARS)[number]['id'];
+export const avatarInputSchema = z.object({
+  avatar: z.enum(AVATARS.map((a) => a.id) as [AvatarId, ...AvatarId[]]),
+});
+
 // --- Actions de jeu (le serveur ajoute lui-même le playerId) ---------------
 
 const slot = z.union([z.literal(0), z.literal(1), z.literal(2)]);
@@ -101,6 +121,7 @@ export type RoomStatus = 'lobby' | 'playing' | 'finished';
 export interface LobbyPlayer {
   id: PlayerId;
   name: string;
+  avatar: AvatarId;
   teamId: TeamId | null;
   connected: boolean;
 }
@@ -122,6 +143,8 @@ export interface RoomSnapshot {
    * chrono de la phase, ou délai de grâce quand il ne reste que des joueurs déconnectés.
    */
   timer: { endsInMs: number; reason: 'chrono' | 'absents' } | null;
+  /** Vrai si le serveur a une clé GIPHY : les téléphones peuvent alors envoyer des GIF. */
+  gifs: boolean;
 }
 
 export interface GameUpdate {
@@ -149,11 +172,35 @@ export type EmojiReaction = (typeof EMOJI_REACTIONS)[number];
 /** Délai minimal entre deux réactions d'un même joueur. */
 export const REACTION_COOLDOWN_MS = 800;
 
-/** Union extensible : on pourra y ajouter { kind: 'gif', ... } plus tard. */
+/** Un GIF ne peut être envoyé qu'une fois toutes les quelques secondes (ils prennent de la place à l'écran). */
+export const GIF_REACTION_COOLDOWN_MS = 3000;
+
+/** Ce que le téléphone envoie : un émoji, ou l'identifiant d'un GIF GIPHY. */
 export const reactionInputSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('emoji'), emoji: z.enum(EMOJI_REACTIONS) }),
+  z.object({ kind: z.literal('gif'), id: z.string().regex(/^[A-Za-z0-9]{4,40}$/, 'GIF inconnu.') }),
 ]);
-export type ReactionPayload = z.infer<typeof reactionInputSchema>;
+export type ReactionInput = z.infer<typeof reactionInputSchema>;
+
+/** GIF prêt à afficher (adresses vérifiées par le serveur : toujours chez GIPHY). */
+export interface GifResult {
+  id: string;
+  title: string;
+  /** Version pour l'écran principal. */
+  url: string;
+  /** Petite version pour la grille de recherche du téléphone. */
+  previewUrl: string;
+  width: number;
+  height: number;
+}
+
+export const gifSearchInputSchema = z.object({
+  query: z.string().trim().max(50),
+  offset: z.number().int().min(0).max(500).default(0),
+});
+
+/** Ce que tout le monde reçoit. */
+export type ReactionPayload = { kind: 'emoji'; emoji: EmojiReaction } | { kind: 'gif'; gif: GifResult };
 
 export interface Reaction {
   id: string;
@@ -178,12 +225,19 @@ export interface ClientToServerEvents {
   'room:leave': (ack: Ack) => void;
   'lobby:team': (input: z.input<typeof teamInputSchema>, ack: Ack) => void;
   'lobby:settings': (input: z.input<typeof settingsInputSchema>, ack: Ack) => void;
+  /** Choix du portrait (possible à tout moment, même en partie). */
+  'lobby:avatar': (input: z.input<typeof avatarInputSchema>, ack: Ack) => void;
   'game:start': (ack: Ack) => void;
   'game:action': (input: GameActionInput, ack: Ack) => void;
   'game:restart': (ack: Ack) => void;
   /** Hôte : joue le coup par défaut à la place d'un joueur qui tarde ou s'est déconnecté. */
   'game:skip': (input: z.input<typeof skipInputSchema>, ack: Ack) => void;
-  'game:react': (input: ReactionPayload, ack: Ack) => void;
+  'game:react': (input: ReactionInput, ack: Ack) => void;
+  /** Recherche de GIF (tendances si la recherche est vide), via le serveur qui détient la clé GIPHY. */
+  'gif:search': (
+    input: z.input<typeof gifSearchInputSchema>,
+    ack: Ack<{ gifs: GifResult[]; next: number | null }>,
+  ) => void;
 }
 
 export interface ServerToClientEvents {
