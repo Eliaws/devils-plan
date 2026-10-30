@@ -1,5 +1,5 @@
 import { CARD_SETS, MIN_PLAYERS, TEAM_MODE_MIN_PLAYERS } from '@umbra/engine';
-import { type RoomSnapshot, TEAMS } from '@umbra/protocol';
+import { type RoomSnapshot, TEAMS, TURN_DURATIONS } from '@umbra/protocol';
 import { Check, Copy, Crown, QrCode, Share2, Tv } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useState } from 'react';
@@ -130,6 +130,34 @@ export function Lobby({ room, playerId }: { room: RoomSnapshot; playerId: string
             );
           })}
         </div>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="mb-2 text-sm text-muted">Chrono par phase</h2>
+        <div className="grid grid-cols-4 gap-2">
+          {([null, ...TURN_DURATIONS] as const).map((seconds) => {
+            const selected = room.settings.turnSeconds === seconds;
+            return (
+              <button
+                key={seconds ?? 'aucun'}
+                type="button"
+                disabled={!isHost}
+                onClick={() => actions.setTurnSeconds(seconds)}
+                className={cx(
+                  'min-h-11 rounded-xl border text-sm transition',
+                  selected ? 'border-gold bg-gold/10 text-gold' : 'border-line bg-surface',
+                  !isHost && !selected && 'opacity-40',
+                )}
+              >
+                {seconds ? `${seconds} s` : 'Aucun'}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          À la fin du chrono, ceux qui n'ont pas joué misent 0 et attaquent à la Lame. Sans chrono, un joueur déconnecté
+          est remplacé ainsi au bout de 20 s.
+        </p>
       </section>
 
       <div className="mt-auto flex flex-col gap-3 pt-8">

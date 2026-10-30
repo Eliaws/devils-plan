@@ -1,6 +1,6 @@
 import { SLOTS } from './cards.ts';
 import { dealDamage } from './combat.ts';
-import { allMonstersDefeated, emptyRound, GameRuleError, getPlayer } from './state.ts';
+import { allMonstersDefeated, emptyRound, GameRuleError, getPlayer, requireParticipant } from './state.ts';
 import type { GameEvent, GameState, PlayerId, RankingEntry } from './types.ts';
 
 export const COINS_PER_ROUND = 1;
@@ -8,6 +8,7 @@ export const COINS_PER_ROUND = 1;
 /** Début de manche : +1 pièce à chacun, dégâts de Poison, puis phase de mise. */
 export function startRound(state: GameState, number: number, events: GameEvent[]): void {
   state.round = emptyRound(number);
+  state.round.participants = state.players.filter((p) => !state.absent.includes(p.id)).map((p) => p.id);
   for (const player of state.players) player.coins += COINS_PER_ROUND;
   events.push({ type: 'roundStarted', round: number });
 
@@ -46,10 +47,11 @@ export function markReady(state: GameState, playerId: PlayerId, events: GameEven
     throw new GameRuleError('WRONG_PHASE', `Action impossible pendant la phase « ${state.phase} ».`);
   }
   getPlayer(state, playerId);
+  requireParticipant(state, playerId);
   if (state.round.ready.includes(playerId)) return;
   state.round.ready.push(playerId);
   events.push({ type: 'playerReady', playerId });
-  if (state.players.every((p) => state.round.ready.includes(p.id))) {
+  if (state.round.participants.every((id) => state.round.ready.includes(id))) {
     startRound(state, state.round.number + 1, events);
   }
 }

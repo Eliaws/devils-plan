@@ -18,6 +18,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   for (const client of clients.splice(0)) client.disconnect();
+  app.manager.dispose();
   await app.io.close();
 });
 

@@ -29,6 +29,9 @@ Variables d'environnement :
 |---|---|---|
 | `PORT` | `3000` | Port d'écoute |
 | `HOST` | `0.0.0.0` | Interface d'écoute (`127.0.0.1` si seul le proxy doit y accéder) |
+| `DATA_FILE` | `apps/server/data/rooms.json` | Sauvegarde des parties en cours |
+
+Les parties en cours sont **sauvegardées sur disque** (au plus une écriture par seconde) et rechargées au démarrage : un redémarrage ou une mise à jour ne les efface plus, les joueurs retrouvent leur place en rechargeant la page. Le dossier de sauvegarde doit rester en place d'un déploiement à l'autre (il est ignoré par git).
 
 ## 2. Le lancer en service (systemd)
 
@@ -100,4 +103,4 @@ npm run build
 sudo systemctl restart umbra
 ```
 
-Un redémarrage efface les parties en cours (elles sont en mémoire) : mieux vaut le faire quand personne ne joue.
+Les parties en cours sont sauvegardées et reprennent après le redémarrage ; pendant les quelques secondes de coupure, les téléphones se reconnectent tout seuls.

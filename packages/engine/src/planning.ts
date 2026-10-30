@@ -1,7 +1,7 @@
 import { isAttackEquipment, MONSTERS, SLOTS, type SlotIndex, SPECIALS } from './cards.ts';
 import { clone } from './clone.ts';
 import { shuffle } from './rng.ts';
-import { GameRuleError, getPlayer, removeOne } from './state.ts';
+import { GameRuleError, getPlayer, removeOne, requireParticipant } from './state.ts';
 import type { GameEvent, GameState, Plan, PlayerId, ScoutEntry } from './types.ts';
 
 function requirePhase(state: GameState, phase: GameState['phase']): void {
@@ -38,22 +38,20 @@ function requireOtherPlayer(state: GameState, playerId: PlayerId, targetId: Play
 export function placeBid(state: GameState, playerId: PlayerId, amount: number, events: GameEvent[]): void {
   requirePhase(state, 'bidding');
   const player = getPlayer(state, playerId);
+  requireParticipant(state, playerId);
   requireCount(amount, player.coins, 'Mise');
 
   state.round.bids[playerId] = amount;
   events.push({ type: 'bidPlaced', playerId });
 
-  if (state.players.every((p) => state.round.bids[p.id] !== undefined)) revealBids(state, events);
+  if (state.round.participants.every((id) => state.round.bids[id] !== undefined)) revealBids(state, events);
 }
 
 /** Mise la plus haute en premier, égalités tirées au sort. Tous paient leur mise. */
 function revealBids(state: GameState, events: GameEvent[]): void {
   const { bids } = state.round;
-  const order = shuffle(
-    state,
-    state.players.map((p) => p.id),
-  ).sort((a, b) => bids[b]! - bids[a]!);
-  for (const player of state.players) player.coins -= bids[player.id]!;
+  const order = shuffle(state, state.round.participants).sort((a, b) => bids[b]! - bids[a]!);
+  for (const player of state.players) player.coins -= bids[player.id] ?? 0;
 
   state.round.revealedBids = { ...bids };
   state.round.order = order;
@@ -67,6 +65,7 @@ function revealBids(state: GameState, events: GameEvent[]): void {
 export function scout(state: GameState, playerId: PlayerId, events: GameEvent[]): void {
   requirePhase(state, 'planning');
   const player = getPlayer(state, playerId);
+  requireParticipant(state, playerId);
   if (state.round.scouted[playerId]) {
     throw new GameRuleError('SPECIAL_ALREADY_USED', 'Vous avez déjà joué une carte Spéciale cette manche.');
   }
@@ -93,10 +92,11 @@ export function scout(state: GameState, playerId: PlayerId, events: GameEvent[])
  */
 export function submitPlan(state: GameState, playerId: PlayerId, plan: Plan, events: GameEvent[]): boolean {
   requirePhase(state, 'planning');
+  requireParticipant(state, playerId);
   validatePlan(state, playerId, plan);
   state.round.plans[playerId] = clone(plan);
   events.push({ type: 'planSubmitted', playerId });
-  return state.players.every((p) => state.round.plans[p.id] !== undefined);
+  return state.round.participants.every((id) => state.round.plans[id] !== undefined);
 }
 
 export function validatePlan(state: GameState, playerId: PlayerId, plan: Plan): void {

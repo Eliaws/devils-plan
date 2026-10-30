@@ -14,6 +14,7 @@ import type {
   ServerToClientEvents,
   Session,
   TeamId,
+  TurnDuration,
 } from '@umbra/protocol';
 import { io, type Socket } from 'socket.io-client';
 import { create } from 'zustand';
@@ -36,6 +37,8 @@ interface StoreState {
   lost: string | null;
   /** Réactions récentes (quelques secondes), affichées par l'écran principal. */
   reactions: Reaction[];
+  /** Fin du minuteur, en heure locale (le serveur envoie une durée, pas une heure : pas de décalage d'horloge). */
+  timer: { endsAt: number; reason: 'chrono' | 'absents' } | null;
 }
 
 const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io({ transports: ['websocket', 'polling'] });
@@ -51,6 +54,7 @@ export const useStore = create<StoreState>(() => ({
   error: null,
   lost: null,
   reactions: [],
+  timer: null,
 }));
 
 const set = useStore.setState;
@@ -158,16 +162,21 @@ socket.on('disconnect', () => set({ connected: false }));
 socket.on('room:update', (room) => {
   const previous = useStore.getState().room;
   if (room.status === 'lobby' && previous && previous.status !== 'lobby') resetGame();
-  set({ room });
+  set({
+    room,
+    timer: room.timer ? { endsAt: Date.now() + room.timer.endsInMs, reason: room.timer.reason } : null,
+  });
 });
 
 socket.on('game:update', (update) => {
   const isResolution = update.events.some((e) => e.type === 'resolutionStarted');
-  const { history, game } = useStore.getState();
+  const { history, game, lastResolution } = useStore.getState();
   set({
     game: update,
     history: game ? [...history, ...update.events] : update.events,
     ...(isResolution ? { lastResolution: update.events } : {}),
+    // Reconnexion pendant le récap : le serveur renvoie le résumé de la manche.
+    ...(!isResolution && update.lastResolution && !lastResolution ? { lastResolution: update.lastResolution } : {}),
   });
 });
 
@@ -246,6 +255,9 @@ export const actions = {
 
   setTeam: (teamId: TeamId | null) => attempt(() => request('lobby:team', { teamId })),
   setCardSet: (cardSet: CardSet) => attempt(() => request('lobby:settings', { cardSet })),
+  setTurnSeconds: (turnSeconds: TurnDuration | null) => attempt(() => request('lobby:settings', { turnSeconds })),
+  /** Hôte : jouer le coup par défaut à la place d'un joueur. */
+  skip: (playerId: PlayerId) => attempt(() => request('game:skip', { playerId })),
   start: () => attempt(() => request('game:start')),
   act: (action: GameActionInput) => attempt(() => request('game:action', action)),
   restart: () => attempt(() => request('game:restart')),

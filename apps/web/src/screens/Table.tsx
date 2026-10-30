@@ -10,7 +10,9 @@ import { PlayerTokens } from '../components/table/PlayerTokens.tsx';
 import { CARD_SET_LABELS, cardImage } from '../game/cards.ts';
 import { initials, playerColor } from '../game/colors.ts';
 import { makeNames, sideLabel } from '../game/describe.ts';
+import { useCountdown, useWakeLock } from '../game/hooks.ts';
 import { type Frame, usePlayback } from '../game/playback.ts';
+import { phaseProgress } from '../game/status.ts';
 import { useStore } from '../net/store.ts';
 import { paths } from '../router.ts';
 import { Eclipse, Logo } from '../ui/brand.tsx';
@@ -20,6 +22,7 @@ export function Table({ room }: { room: RoomSnapshot }) {
   const game = useStore((s) => s.game);
   const reactions = useStore((s) => s.reactions);
   const frame = usePlayback(game, null);
+  useWakeLock(true);
 
   return (
     <main className="relative h-dvh overflow-hidden">
@@ -151,24 +154,25 @@ function Caption({
 }
 
 function PhaseBanner({ view }: { view: GameView }) {
-  const total = view.players.length;
+  const progress = phaseProgress(view);
+  const total = Math.max(progress.total, 1);
   const content = {
     bidding: {
       title: 'Misez !',
       subtitle: 'La plus grosse mise frappe en premier',
-      done: view.players.filter((p) => p.hasBid).length,
+      done: progress.done,
       verb: 'ont misé',
     },
     planning: {
       title: 'Préparez vos attaques',
       subtitle: 'Chacun choisit ses cartes en secret',
-      done: view.players.filter((p) => p.hasPlanned).length,
+      done: progress.done,
       verb: 'sont prêts',
     },
     recap: {
       title: `Manche ${view.round} terminée`,
       subtitle: 'Réagissez depuis vos téléphones !',
-      done: view.players.filter((p) => p.isReady).length,
+      done: progress.done,
       verb: 'prêts pour la suite',
     },
     gameOver: null,
@@ -195,6 +199,7 @@ function PhaseBanner({ view }: { view: GameView }) {
           {content.done}/{total} {content.verb}
         </span>
       </div>
+      <TableCountdown />
     </motion.div>
   );
 }
@@ -337,5 +342,19 @@ function TableGameOver({ view, reactions }: { view: GameView; reactions: Reactio
 
       <PlayerTokens view={view} actorId={null} reactions={reactions} />
     </div>
+  );
+}
+
+/** Compte à rebours du minuteur, sous la bannière de phase. */
+function TableCountdown() {
+  const timer = useStore((s) => s.timer);
+  const seconds = useCountdown(timer?.endsAt ?? null);
+  if (!timer || seconds === null) return null;
+  return (
+    <p className={`mt-3 text-[1.2vw] tabular-nums ${seconds <= 10 ? 'text-blood' : 'text-muted'}`}>
+      {timer.reason === 'chrono'
+        ? `Plus que ${seconds} s pour jouer`
+        : `Les joueurs déconnectés joueront automatiquement dans ${seconds} s`}
+    </p>
   );
 }

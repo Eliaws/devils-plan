@@ -1,9 +1,11 @@
 import type { GameView, PlayerId } from '@umbra/engine';
 import type { Reaction } from '@umbra/protocol';
-import { Check, Coins, Hourglass } from 'lucide-react';
+import { Check, Coins } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { initials, playerColor } from '../../game/colors.ts';
+import { playerStatus } from '../../game/status.ts';
 import { cx } from '../../ui/primitives.tsx';
+import { orderedPlayers, StatusIcon } from '../GameInfo.tsx';
 
 /**
  * Les joueurs en jetons colorés, dans l'ordre de passage. Le joueur qui agit est mis en avant,
@@ -18,9 +20,7 @@ export function PlayerTokens({
   actorId: PlayerId | null;
   reactions: Reaction[];
 }) {
-  const ordered = view.order.length > 0 ? view.order.map((id) => view.players.find((p) => p.id === id)!) : view.players;
-  const done = (p: (typeof view.players)[number]) =>
-    view.phase === 'bidding' ? p.hasBid : view.phase === 'recap' ? p.isReady : p.hasPlanned;
+  const ordered = orderedPlayers(view);
   const scoreOf = (sideId: string) => view.sides.find((s) => s.id === sideId)?.score ?? 0;
 
   return (
@@ -33,7 +33,11 @@ export function PlayerTokens({
             key={player.id}
             layout
             className="relative flex w-[7.5vw] min-w-20 flex-col items-center"
-            animate={{ scale: acting ? 1.18 : 1, opacity: actorId && !acting ? 0.55 : 1 }}
+            animate={{
+              scale: acting ? 1.18 : 1,
+              opacity: player.isAbsent ? 0.35 : actorId && !acting ? 0.55 : 1,
+              filter: player.isAbsent ? 'grayscale(1)' : 'grayscale(0)',
+            }}
             transition={{ type: 'spring', damping: 18 }}
           >
             <ReactionStream reactions={reactions.filter((r) => r.playerId === player.id)} />
@@ -47,7 +51,7 @@ export function PlayerTokens({
               >
                 {initials(player.name)}
               </div>
-              {view.order.length > 0 && (
+              {view.order.includes(player.id) && (
                 <span className="absolute -top-1 -left-1 grid size-6 place-items-center rounded-full border border-line bg-bg text-xs font-semibold tabular-nums">
                   {index + 1}
                 </span>
@@ -56,14 +60,19 @@ export function PlayerTokens({
                 <span
                   className={cx(
                     'absolute -right-1 -bottom-1 grid size-6 place-items-center rounded-full border border-line',
-                    done(player) ? 'bg-venom text-bg' : 'bg-raised text-faint',
+                    playerStatus(view, player) === 'done' ? 'bg-venom text-bg' : 'bg-raised',
                   )}
                 >
-                  {done(player) ? <Check className="size-3.5" /> : <Hourglass className="size-3.5" />}
+                  {playerStatus(view, player) === 'done' ? (
+                    <Check className="size-3.5" />
+                  ) : (
+                    <StatusIcon status={playerStatus(view, player)} />
+                  )}
                 </span>
               )}
             </div>
             <span className="mt-2 max-w-full truncate text-[1.1vw] font-medium">{player.name}</span>
+            {player.isAbsent && <span className="text-[0.9vw] text-blood">absent</span>}
             <span className="flex items-center gap-2 text-[0.95vw] text-muted tabular-nums">
               <span className="text-gold">{scoreOf(player.sideId)} PV</span>
               <span className="flex items-center gap-0.5">

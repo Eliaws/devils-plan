@@ -118,6 +118,17 @@ Le Bouclier du héros ne bloque alors que le Sceau d'annulation, puisque l'Envo�
 | **Le filet magique** | Ciblez un emplacement : le monstre qui s'y trouve est marqué jusqu'à sa mort. Son tueur gagne les PV, mais c'est vous qui récupérez ses Équipements. Si plusieurs filets visent le même monstre, le premier posé l'emporte 🔧. | Planification |
 | **Le Poing infernal** ✅ | Se joue avec une attaque : +2 dégâts sur son premier coup. Ajouté à la pioche Spéciale (absent du livret). | Planification |
 
+## 5 bis. Joueurs absents et chrono ✅
+
+Pour qu'un joueur absent ou trop lent ne bloque jamais la partie, le serveur peut jouer **un coup par défaut** à sa place : mise de 0, Lame du chasseur sur le premier monstre du plateau, ou « prêt » pendant le récapitulatif.
+
+- **Joueur parti (déconnecté)** ✅ : après 20 s d'attente (ou à la fin du chrono, ou quand l'hôte choisit « Jouer pour lui »), il est déclaré **absent**. Il joue des coups par défaut **jusqu'à la fin de la manche en cours**, puis **il ne joue plus** : personne ne l'attend aux manches suivantes, il n'apparaît plus dans l'ordre de passage. Il garde ses cartes, ses pièces (il continue d'en recevoir) et ses points.
+- **Retour** ✅ : dès qu'il se reconnecte, il **reprend sa place à la manche suivante** (ou tout de suite si les mises de la manche ne sont pas encore révélées).
+- **Joueur connecté mais lent** : à la fin du chrono (ou sur « Jouer pour lui »), un seul coup par défaut est joué ; il reste dans la partie.
+- **Chrono** : optionnel, choisi par l'hôte dans le lobby (30, 60 ou 90 s par phase).
+- Si plus personne n'est connecté, la partie attend : elle ne se joue jamais toute seule.
+- Les effets différés d'un absent (Charge, Envoûtement, Morsure) se déclenchent à sa prochaine action, donc après son retour 🔧.
+
 ## 6. Modes de jeu
 
 - **3 à 5 joueurs** : tous en solo.

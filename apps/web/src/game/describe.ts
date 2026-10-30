@@ -133,6 +133,16 @@ export function describe(event: GameEvent, names: Names): Line | null {
         text: `${subject(event.playerId, 'gagne', 'gagnes')} ${event.card ? specialName(event.card) : 'une carte Spéciale'}`,
         tone: 'reward',
       };
+    case 'playerLeft':
+      return {
+        text: `${subject(event.playerId, 'est parti', 'es parti')} : Lame jusqu'à la fin de la manche`,
+        tone: 'blocked',
+      };
+    case 'playerReturned':
+      return {
+        text: `${subject(event.playerId, 'est de retour', 'es de retour')}${event.nextRound ? ' : reprise à la prochaine manche' : ''}`,
+        tone: 'info',
+      };
     case 'specialDeckEmpty':
       return { text: 'Plus aucune carte Spéciale', tone: 'info' };
     case 'gameOver':

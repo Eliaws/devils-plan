@@ -145,9 +145,10 @@ Fait : choix de l'équipe dans le lobby, score commun, classement par camp. Sur 
 - Fait : illustrations optimisées (WebP), écran de fin, guide de déploiement.
 - Fait : identité **Umbra** (logo éclipse, typographie Cinzel), écran principal refait (scène animée, jetons de joueurs, classement animé, podium).
 - Fait : **récapitulatif synchronisé** (la manche suivante attend que tout le monde soit prêt) et **réactions emoji** envoyées à l'écran principal.
+- Fait : **robustesse** — coup par défaut pour les absents (délai de grâce, chrono optionnel, « Jouer pour lui » de l'hôte), parties sauvegardées sur disque, récapitulatif renvoyé après un rechargement, écran maintenu allumé, application installable (PWA).
 - Réactions en **GIF** depuis une banque en ligne (GIPHY) : le format des réactions est déjà prévu pour (`kind: 'gif'`).
 - Dos de cartes, sons.
-- Journal conservé côté serveur (aujourd'hui, il repart de zéro quand on recharge la page).
+- Journal complet conservé côté serveur (le récapitulatif de la dernière manche est déjà renvoyé après un rechargement).
 - Option de partie « Sceau d'annulation en réaction ».
 - Module optionnel des Rôles (une fois les rôles définis).
 

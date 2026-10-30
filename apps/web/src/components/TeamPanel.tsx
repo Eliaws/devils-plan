@@ -52,6 +52,8 @@ export function TeamPanel({ view, me }: { view: GameView; me: PlayerView }) {
 }
 
 function status(mate: PlayerView, view: GameView, nameOf: (id: string) => string): string {
+  if (mate.isAbsent) return 'Absent : ne joue plus jusqu’à son retour';
+  if (!mate.isParticipant) return 'Reprend à la prochaine manche';
   if (view.phase === 'bidding') return mate.hasBid ? `Mise ${mate.bid ?? 0} 🪙` : 'Réfléchit à sa mise…';
   if (view.phase === 'planning') return mate.plan ? planSummary(mate.plan, view, nameOf) : 'Prépare son plan…';
   if (view.phase === 'recap') return mate.isReady ? 'Prêt pour la suite' : 'Lit le récapitulatif…';

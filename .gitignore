@@ -5,3 +5,5 @@ coverage/
 .DS_Store
 # Réglages locaux de l’éditeur / de Claude Code
 .claude/
+# Parties sauvegardées par le serveur
+apps/server/data/

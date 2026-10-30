@@ -40,6 +40,10 @@ export interface PlayerView {
   hasPlanned: boolean;
   /** Phase recap : a lu le récapitulatif. */
   isReady: boolean;
+  /** Parti (déconnecté) : ne joue plus jusqu'à son retour. */
+  isAbsent: boolean;
+  /** Joue la manche en cours (faux pour un absent, ou un joueur revenu qui reprend à la manche suivante). */
+  isParticipant: boolean;
   /** Les champs suivants valent null sauf pour soi-même et ses coéquipiers. */
   equipment: EquipmentId[] | null;
   specials: SpecialId[] | null;
@@ -112,6 +116,8 @@ export function viewFor(state: GameState, viewer: Viewer): GameView {
         hasBid: round.bids[p.id] !== undefined,
         hasPlanned: round.plans[p.id] !== undefined,
         isReady: round.ready.includes(p.id),
+        isAbsent: state.absent.includes(p.id),
+        isParticipant: round.participants.includes(p.id),
         equipment: visible ? p.equipment : null,
         specials: visible ? p.specials : null,
         bid: visible || round.revealedBids ? (round.bids[p.id] ?? null) : null,

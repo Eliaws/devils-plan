@@ -1,15 +1,14 @@
 import type { GameEvent, GameView, PlayerId } from '@umbra/engine';
-import { Check, Coins, Hourglass, Skull, Trophy } from 'lucide-react';
+import { Check, Clock, Coins, Hourglass, Skull, Trophy, UserX } from 'lucide-react';
 import { motion } from 'motion/react';
 import { playerColor } from '../game/colors.ts';
 import { describe, type Line, makeNames, sideLabel, type Tone } from '../game/describe.ts';
+import { type PlayerStatus, playerStatus } from '../game/status.ts';
 import { cx } from '../ui/primitives.tsx';
 
 /** Ordre de passage (ou liste des joueurs avant la révélation des mises), avec l'avancement de chacun. */
 export function OrderStrip({ view, me, large = false }: { view: GameView; me: PlayerId | null; large?: boolean }) {
-  const ordered = view.order.length > 0 ? view.order.map((id) => view.players.find((p) => p.id === id)!) : view.players;
-  const done = (p: (typeof view.players)[number]) =>
-    view.phase === 'bidding' ? p.hasBid : view.phase === 'recap' ? p.isReady : p.hasPlanned;
+  const ordered = orderedPlayers(view);
   return (
     <ol
       className={cx('flex gap-2', large ? 'flex-wrap' : 'scrollbar-none -mx-4 overflow-x-auto px-4')}
@@ -22,27 +21,42 @@ export function OrderStrip({ view, me, large = false }: { view: GameView; me: Pl
             'flex shrink-0 items-center gap-1.5 rounded-full border',
             large ? 'px-4 py-2 text-lg' : 'px-3 py-1.5 text-sm',
             p.id === me ? 'border-gold/60 bg-gold/10' : 'border-line bg-surface',
+            playerStatus(view, p) === 'absent' && 'opacity-45',
           )}
         >
           <span className="size-2 shrink-0 rounded-full" style={{ background: playerColor(view, p.id) }} aria-hidden />
-          {view.order.length > 0 && <span className="text-xs text-muted tabular-nums">{index + 1}</span>}
+          {view.order.includes(p.id) && <span className="text-xs text-muted tabular-nums">{index + 1}</span>}
           <span className="max-w-24 truncate">{p.id === me ? 'Toi' : p.name}</span>
-          {view.revealedBids && view.phase === 'planning' && (
+          {view.revealedBids?.[p.id] !== undefined && view.phase === 'planning' && (
             <span className="flex items-center gap-0.5 text-xs text-gold tabular-nums">
               <Coins className="size-3" />
               {view.revealedBids[p.id]}
             </span>
           )}
-          {view.phase !== 'gameOver' &&
-            (done(p) ? (
-              <Check className="size-3.5 text-venom" aria-label="Prêt" />
-            ) : (
-              <Hourglass className="size-3.5 text-faint" aria-label="En attente" />
-            ))}
+          {view.phase !== 'gameOver' && <StatusIcon status={playerStatus(view, p)} />}
         </li>
       ))}
     </ol>
   );
+}
+
+/** Joueurs dans l'ordre de passage, puis ceux qui ne jouent pas cette manche (absents, de retour). */
+export function orderedPlayers(view: GameView) {
+  if (view.order.length === 0) return view.players;
+  const inOrder = view.order.map((id) => view.players.find((p) => p.id === id)!);
+  return [...inOrder, ...view.players.filter((p) => !view.order.includes(p.id))];
+}
+
+const STATUS_ICONS = {
+  done: { icon: Check, className: 'text-venom', label: 'Prêt' },
+  waiting: { icon: Hourglass, className: 'text-faint', label: 'En attente' },
+  absent: { icon: UserX, className: 'text-blood', label: 'Absent' },
+  next: { icon: Clock, className: 'text-gold', label: 'Reprend à la prochaine manche' },
+} as const;
+
+export function StatusIcon({ status, className }: { status: PlayerStatus; className?: string }) {
+  const { icon: Icon, className: color, label } = STATUS_ICONS[status];
+  return <Icon className={cx('size-3.5 shrink-0', color, className)} aria-label={label} />;
 }
 
 /** Classement des camps (joueurs solo ou équipes). */

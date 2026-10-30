@@ -7,6 +7,7 @@ import { CardTile } from '../components/CardTile.tsx';
 import { EventList, OrderStrip, Scoreboard, toLines } from '../components/GameInfo.tsx';
 import { ReactionBar } from '../components/ReactionBar.tsx';
 import { TeamPanel } from '../components/TeamPanel.tsx';
+import { TimerPill, WaitingList } from '../components/Waiting.tsx';
 import {
   CARD_SET_LABELS,
   cardImage,
@@ -18,6 +19,7 @@ import {
   specialText,
 } from '../game/cards.ts';
 import { makeNames } from '../game/describe.ts';
+import { useWakeLock } from '../game/hooks.ts';
 import { type PlanDraft, usePlanDraft } from '../game/plan-draft.ts';
 import { planSummary } from '../game/plan-summary.ts';
 import { actions, useStore } from '../net/store.ts';
@@ -25,7 +27,7 @@ import { Eclipse } from '../ui/brand.tsx';
 import { Button, cx, Pill, Sheet, Stepper } from '../ui/primitives.tsx';
 import { GameOver } from './GameOver.tsx';
 
-const PHASE_LABELS = { bidding: 'Mises', planning: 'Plans', recap: 'Récapitulatif', gameOver: 'Fin' } as const;
+const PHASE_LABELS = { bidding: 'Mises', planning: 'Plans', recap: 'Récap', gameOver: 'Fin' } as const;
 
 export function PlayerGame({ view, room, playerId }: { view: GameView; room: RoomSnapshot; playerId: string }) {
   const connected = useStore((s) => s.connected);
@@ -33,19 +35,21 @@ export function PlayerGame({ view, room, playerId }: { view: GameView; room: Roo
   const history = useStore((s) => s.history);
   const [sheet, setSheet] = useState<'players' | 'journal' | null>(null);
 
+  useWakeLock(view.phase !== 'gameOver');
   const me = view.players.find((p) => p.id === playerId);
   if (!me) return null;
   const mySide = view.sides.find((s) => s.id === me.sideId);
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
-      <header className="pt-safe sticky top-0 z-20 flex items-center gap-2 border-b border-line bg-bg/90 px-4 pb-3 backdrop-blur">
-        <Eclipse className="size-7 shrink-0" />
-        <div className="flex-1">
+      <header className="pt-safe sticky top-0 z-20 flex items-center gap-1.5 border-b border-line bg-bg/90 px-3 pb-3 backdrop-blur">
+        <Eclipse className="size-7 shrink-0 max-[400px]:hidden" />
+        <div className="min-w-0 flex-1">
           <p className="text-xs text-muted">Manche {view.round}</p>
           <p className="font-semibold">{PHASE_LABELS[view.phase]}</p>
         </div>
         {!connected && <WifiOff className="size-4 text-blood" aria-label="Connexion perdue" />}
+        <TimerPill />
         <Pill title="Tes pièces">
           <Coins className="size-4 text-gold" />
           {me.coins}
@@ -57,7 +61,7 @@ export function PlayerGame({ view, room, playerId }: { view: GameView; room: Roo
         <button
           type="button"
           onClick={() => setSheet('players')}
-          className="grid size-10 place-items-center text-muted"
+          className="grid size-9 shrink-0 place-items-center text-muted"
           aria-label="Joueurs et scores"
         >
           <Users className="size-5" />
@@ -65,7 +69,7 @@ export function PlayerGame({ view, room, playerId }: { view: GameView; room: Roo
         <button
           type="button"
           onClick={() => setSheet('journal')}
-          className="grid size-10 place-items-center text-muted"
+          className="grid size-9 shrink-0 place-items-center text-muted"
           aria-label="Journal"
         >
           <ScrollText className="size-5" />
@@ -116,7 +120,7 @@ function ActiveGame({ view, me }: { view: GameView; me: PlayerView }) {
   const names = makeNames(view, me.id);
 
   const planning = view.phase === 'planning';
-  const showPlanner = planning && (!me.hasPlanned || editing);
+  const showPlanner = planning && me.isParticipant && (!me.hasPlanned || editing);
 
   if (view.phase === 'recap') {
     return (
@@ -154,10 +158,18 @@ function ActiveGame({ view, me }: { view: GameView; me: PlayerView }) {
       <TeamPanel view={view} me={me} />
 
       <section className="mt-4 flex-1 px-4 pb-4">
-        {view.phase === 'bidding' && <BidPanel view={view} me={me} />}
+        {!me.isParticipant && (
+          <div className="rounded-2xl border border-gold/40 bg-gold/10 p-5">
+            <p className="text-lg font-semibold">Content de te revoir !</p>
+            <p className="mt-1 text-sm text-muted">
+              Tu reprends la partie à la prochaine manche, avec tes cartes, tes pièces et tes points.
+            </p>
+          </div>
+        )}
+        {me.isParticipant && view.phase === 'bidding' && <BidPanel view={view} me={me} />}
         {showPlanner && <PlanPanel view={view} me={me} draft={draft} onDone={() => setEditing(false)} />}
         {planning && me.hasPlanned && !editing && myPlan && (
-          <Waiting view={view} plan={myPlan} nameOf={names.player} onEdit={() => setEditing(true)} />
+          <Waiting view={view} me={me} plan={myPlan} nameOf={names.player} onEdit={() => setEditing(true)} />
         )}
       </section>
     </>
@@ -169,7 +181,6 @@ function ActiveGame({ view, me }: { view: GameView; me: PlayerView }) {
 function RecapPanel({ view, me }: { view: GameView; me: PlayerView }) {
   const lastResolution = useStore((s) => s.lastResolution);
   const lines = lastResolution ? toLines(lastResolution, view, me.id) : [];
-  const waiting = view.players.filter((p) => !p.isReady);
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-5">
@@ -187,11 +198,17 @@ function RecapPanel({ view, me }: { view: GameView; me: PlayerView }) {
       </div>
 
       <div className="mt-6">
-        {me.isReady ? (
-          <p className="rounded-xl bg-raised px-4 py-3 text-center text-sm">
-            <span className="font-medium text-venom">Prêt !</span>{' '}
-            <span className="text-muted">En attente de {waiting.map((p) => p.name).join(', ')}…</span>
+        {!me.isParticipant ? (
+          <p className="rounded-xl bg-raised px-4 py-3 text-center text-sm text-gold">
+            Tu reprends la partie à la prochaine manche.
           </p>
+        ) : me.isReady ? (
+          <>
+            <p className="rounded-xl bg-raised px-4 py-3 text-center text-sm font-medium text-venom">
+              Prêt pour la manche {view.round + 1} !
+            </p>
+            <WaitingList view={view} me={me.id} />
+          </>
         ) : (
           <Button className="w-full" onClick={() => actions.ready()}>
             Prêt pour la manche {view.round + 1}
@@ -207,15 +224,12 @@ function RecapPanel({ view, me }: { view: GameView; me: PlayerView }) {
 function BidPanel({ view, me }: { view: GameView; me: PlayerView }) {
   const [amount, setAmount] = useState(me.bid ?? 0);
   const [editing, setEditing] = useState(!me.hasBid);
-  const waiting = view.players.filter((p) => !p.hasBid);
 
   if (me.hasBid && !editing) {
     return (
       <div className="rounded-2xl border border-line bg-surface p-5">
         <p className="text-lg font-semibold">Mise envoyée : {me.bid} 🪙</p>
-        <p className="mt-1 text-sm text-muted">
-          En attente de {waiting.map((p) => p.name).join(', ') || 'la révélation'}…
-        </p>
+        <WaitingList view={view} me={me.id} />
         <Button variant="secondary" className="mt-4 w-full" onClick={() => setEditing(true)}>
           Modifier ma mise
         </Button>
@@ -413,21 +427,22 @@ function PlayerPicker({
 
 function Waiting({
   view,
+  me,
   plan,
   nameOf,
   onEdit,
 }: {
   view: GameView;
+  me: PlayerView;
   plan: Plan;
   nameOf: (id: string) => string;
   onEdit: () => void;
 }) {
-  const waiting = view.players.filter((p) => !p.hasPlanned);
   return (
     <div className="rounded-2xl border border-line bg-surface p-5">
       <p className="text-lg font-semibold">Plan envoyé</p>
       <p className="mt-1 text-sm">{planSummary(plan, view, nameOf)}</p>
-      <p className="mt-3 text-sm text-muted">En attente de {waiting.map((p) => p.name).join(', ')}…</p>
+      <WaitingList view={view} me={me.id} />
       <Button variant="secondary" className="mt-4 w-full" onClick={onEdit}>
         Modifier mon plan
       </Button>

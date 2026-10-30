@@ -1,3 +1,4 @@
+export { defaultAction, waitingPlayers } from './autoplay.ts';
 export * from './cards.ts';
 export { apply } from './engine.ts';
 export { validatePlan } from './planning.ts';

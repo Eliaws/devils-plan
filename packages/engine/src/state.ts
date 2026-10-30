@@ -52,6 +52,7 @@ export function emptyRound(number: number): RoundState {
     damage: {},
     killers: [],
     ready: [],
+    participants: [],
   };
 }
 
@@ -61,4 +62,11 @@ export function removeOne<T>(list: T[], item: T): boolean {
   if (index === -1) return false;
   list.splice(index, 1);
   return true;
+}
+
+/** Un joueur absent depuis une manche précédente ne joue pas avant la manche suivant son retour. */
+export function requireParticipant(state: GameState, playerId: PlayerId): void {
+  if (!state.round.participants.includes(playerId)) {
+    throw new GameRuleError('NOT_PARTICIPATING', 'Tu reprends la partie à la prochaine manche.');
+  }
 }

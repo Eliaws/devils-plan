@@ -78,7 +78,7 @@ export function Pill({ children, className, title }: { children: ReactNode; clas
     <span
       title={title}
       className={cx(
-        'inline-flex items-center gap-1 rounded-full bg-raised px-2.5 py-1 text-sm font-medium tabular-nums',
+        'inline-flex shrink-0 items-center gap-1 rounded-full bg-raised px-2 py-1 text-sm font-medium tabular-nums',
         className,
       )}
     >

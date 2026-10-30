@@ -64,6 +64,7 @@ export function createGame(config: GameConfig): { state: GameState; events: Game
     specialDeck: [],
     specialDiscard: [],
     pending: [],
+    absent: [],
     round: emptyRound(0),
     result: null,
   };

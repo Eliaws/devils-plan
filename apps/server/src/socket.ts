@@ -14,6 +14,7 @@ import {
   resumeInputSchema,
   type ServerToClientEvents,
   settingsInputSchema,
+  skipInputSchema,
   teamInputSchema,
   watchInputSchema,
 } from '@umbra/protocol';
@@ -41,10 +42,18 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
   const viewerOf = (socket: GameSocket): Viewer =>
     socket.data.playerId ? { kind: 'player', playerId: socket.data.playerId } : { kind: 'table' };
 
-  const sendGame = (socket: GameSocket, room: Room, events: GameEvent[]) => {
+  /** `withRecap` : (re)connexion pendant le récapitulatif, on renvoie le résumé de la dernière manche. */
+  const sendGame = (socket: GameSocket, room: Room, events: GameEvent[], withRecap = false) => {
     if (!room.game) return;
     const viewer = viewerOf(socket);
-    socket.emit('game:update', { view: viewFor(room.game, viewer), events: eventsFor(room.game, events, viewer) });
+    const replayRecap = withRecap && room.lastResolution && ['recap', 'gameOver'].includes(room.game.phase);
+    socket.emit('game:update', {
+      view: viewFor(room.game, viewer),
+      events: eventsFor(room.game, events, viewer),
+      ...(replayRecap && room.lastResolution
+        ? { lastResolution: eventsFor(room.game, room.lastResolution, viewer) }
+        : {}),
+    });
   };
 
   const broadcastGame = (room: Room, events: GameEvent[]) => {
@@ -53,6 +62,12 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
       const socket = io.sockets.sockets.get(id);
       if (socket) sendGame(socket, room, events);
     }
+  };
+
+  // Minuteur écoulé : le serveur a joué pour les retardataires, on prévient tout le monde.
+  manager.onAutoPlay = (room, events) => {
+    broadcastRoom(room);
+    broadcastGame(room, events);
   };
 
   /** Détache le socket de son salon actuel (changement de salon ou déconnexion). */
@@ -64,13 +79,8 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
     void socket.leave(channel(code));
     const room = manager.rooms.get(code);
     if (!room) return;
-    if (playerId) {
-      const member = room.members.find((m) => m.id === playerId);
-      if (member) member.connections = Math.max(0, member.connections - 1);
-    } else {
-      room.tables = Math.max(0, room.tables - 1);
-    }
-    manager.touch(room);
+    if (playerId) manager.setConnected(room, playerId, -1);
+    else manager.setTableConnected(room, -1);
     broadcastRoom(room);
   };
 
@@ -78,10 +88,12 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
     detach(socket);
     socket.data.code = room.code;
     socket.data.playerId = member.id;
-    member.connections += 1;
     void socket.join(channel(room.code));
+    const events = manager.setConnected(room, member.id, 1);
     broadcastRoom(room);
-    sendGame(socket, room, []);
+    // Retour d'un absent : tout le monde est prévenu ; lui reçoit en plus le récap éventuel.
+    if (events.length > 0) broadcastGame(room, events);
+    sendGame(socket, room, [], true);
   };
 
   /** Contexte du joueur courant, ou erreur s'il n'a pas rejoint de partie. */
@@ -124,7 +136,7 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
         const room = manager.getRoom(code);
         detach(socket);
         socket.data.code = code;
-        room.tables += 1;
+        manager.setTableConnected(room, 1);
         void socket.join(channel(code));
         socket.emit('room:update', manager.snapshot(room));
         sendGame(socket, room, []);
@@ -175,9 +187,20 @@ export function attachGameServer(io: GameServer, manager: RoomManager): void {
       handle(ack, () => {
         const action = gameActionSchema.parse(input);
         const { room, playerId } = current(socket);
-        const wasPlaying = room.status === 'playing';
         const events = manager.act(room, playerId, action);
-        if (wasPlaying && room.status !== 'playing') broadcastRoom(room);
+        // Le salon change aussi : minuteur relancé, fin de partie…
+        broadcastRoom(room);
+        broadcastGame(room, events);
+        return null;
+      });
+    });
+
+    socket.on('game:skip', (input, ack) => {
+      handle(ack, () => {
+        const { playerId: targetId } = skipInputSchema.parse(input);
+        const { room, playerId } = current(socket);
+        const events = manager.skip(room, playerId, targetId);
+        broadcastRoom(room);
         broadcastGame(room, events);
         return null;
       });

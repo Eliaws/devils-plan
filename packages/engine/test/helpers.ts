@@ -82,8 +82,9 @@ export function readyAll(state: GameState): { state: GameState; events: GameEven
   const events: GameEvent[] = [];
   let current = state;
   if (current.phase !== 'recap') return { state: current, events };
-  for (const player of state.players) {
-    const step = act(current, { type: 'ready', playerId: player.id });
+  for (const id of state.round.participants) {
+    if (current.phase !== 'recap' || current.round.ready.includes(id)) continue;
+    const step = act(current, { type: 'ready', playerId: id });
     current = step.state;
     events.push(...step.events);
   }

@@ -123,6 +123,8 @@ export interface RoundState {
   killers: PlayerId[];
   /** Joueurs prêts à passer à la manche suivante (phase recap). */
   ready: PlayerId[];
+  /** Joueurs qui jouent cette manche (les absents en sont exclus dès la manche suivante). */
+  participants: PlayerId[];
 }
 
 export interface RankingEntry {
@@ -153,6 +155,8 @@ export interface GameState {
   specialDeck: SpecialId[];
   specialDiscard: SpecialId[];
   pending: PendingEffect[];
+  /** Joueurs partis : coups par défaut jusqu'à la fin de la manche, puis plus rien jusqu'à leur retour. */
+  absent: PlayerId[];
   round: RoundState;
   result: GameResult | null;
 }
@@ -163,7 +167,11 @@ export type Action =
   | { type: 'bid'; playerId: PlayerId; amount: number }
   | { type: 'scout'; playerId: PlayerId }
   | { type: 'plan'; playerId: PlayerId; plan: Plan }
-  | { type: 'ready'; playerId: PlayerId };
+  | { type: 'ready'; playerId: PlayerId }
+  /** Réservé au serveur : le joueur est parti (déconnexion). */
+  | { type: 'leave'; playerId: PlayerId }
+  /** Réservé au serveur : le joueur est revenu. */
+  | { type: 'rejoin'; playerId: PlayerId };
 
 // --- Événements (pilotent les animations et le journal) --------------------
 
@@ -178,6 +186,8 @@ export type GameEvent =
   | { type: 'scouted'; playerId: PlayerId; report: ScoutEntry[] }
   | { type: 'planSubmitted'; playerId: PlayerId }
   | { type: 'playerReady'; playerId: PlayerId }
+  | { type: 'playerLeft'; playerId: PlayerId }
+  | { type: 'playerReturned'; playerId: PlayerId; nextRound: boolean }
   | { type: 'resolutionStarted'; order: PlayerId[] }
   | { type: 'shieldRaised'; playerId: PlayerId }
   | { type: 'effectBlocked'; playerId: PlayerId; sourcePlayerId: PlayerId; card: 'sceau-annulation' | 'envoutement' }

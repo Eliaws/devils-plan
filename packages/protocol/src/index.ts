@@ -34,7 +34,17 @@ export const playerNameSchema = z
 export const joinInputSchema = z.object({ code: roomCodeSchema, name: playerNameSchema });
 export const resumeInputSchema = z.object({ code: roomCodeSchema, token: z.string().min(1).max(100) });
 export const watchInputSchema = z.object({ code: roomCodeSchema });
-export const settingsInputSchema = z.object({ cardSet: z.enum(CARD_SETS) });
+/** Durées possibles du chrono par phase (null : pas de chrono). */
+export const TURN_DURATIONS = [30, 60, 90] as const;
+export type TurnDuration = (typeof TURN_DURATIONS)[number];
+
+export const settingsInputSchema = z
+  .object({
+    cardSet: z.enum(CARD_SETS),
+    turnSeconds: z.union([z.literal(30), z.literal(60), z.literal(90), z.null()]),
+  })
+  .partial();
+export const skipInputSchema = z.object({ playerId: z.string().min(1).max(64) });
 export const teamInputSchema = z.object({
   teamId: z.enum(TEAMS.map((t) => t.id) as [TeamId, ...TeamId[]]).nullable(),
 });
@@ -97,6 +107,8 @@ export interface LobbyPlayer {
 
 export interface RoomSettings {
   cardSet: CardSet;
+  /** Chrono par phase : au-delà, un coup par défaut est joué pour les retardataires. */
+  turnSeconds: TurnDuration | null;
 }
 
 export interface RoomSnapshot {
@@ -105,12 +117,19 @@ export interface RoomSnapshot {
   settings: RoomSettings;
   hostId: PlayerId | null;
   players: LobbyPlayer[];
+  /**
+   * Temps restant (ms, au moment de l'envoi) avant que le serveur joue à la place des retardataires :
+   * chrono de la phase, ou délai de grâce quand il ne reste que des joueurs déconnectés.
+   */
+  timer: { endsInMs: number; reason: 'chrono' | 'absents' } | null;
 }
 
 export interface GameUpdate {
   view: GameView;
   /** Événements de la dernière action (vide lors d'une (re)connexion). */
   events: GameEvent[];
+  /** Récapitulatif de la dernière manche, renvoyé à la (re)connexion pendant la phase récap. */
+  lastResolution?: GameEvent[];
 }
 
 export interface Session {
@@ -162,6 +181,8 @@ export interface ClientToServerEvents {
   'game:start': (ack: Ack) => void;
   'game:action': (input: GameActionInput, ack: Ack) => void;
   'game:restart': (ack: Ack) => void;
+  /** Hôte : joue le coup par défaut à la place d'un joueur qui tarde ou s'est déconnecté. */
+  'game:skip': (input: z.input<typeof skipInputSchema>, ack: Ack) => void;
   'game:react': (input: ReactionPayload, ack: Ack) => void;
 }
 

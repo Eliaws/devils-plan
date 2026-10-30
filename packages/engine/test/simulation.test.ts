@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { apply, CARD_SETS, type CardSet, MONSTER_IDS, MONSTERS, SLOTS, type SlotIndex } from '../src/index.ts';
+import {
+  apply,
+  CARD_SETS,
+  type CardSet,
+  MONSTER_IDS,
+  MONSTERS,
+  SLOTS,
+  type SlotIndex,
+  waitingPlayers,
+} from '../src/index.ts';
 import { type RngHolder, randomInt } from '../src/rng.ts';
 import type { EquipmentPlay, GameEvent, GameState, Plan, PlayerState, SpecialPlay } from '../src/types.ts';
 import { newGame } from './helpers.ts';
@@ -56,7 +65,13 @@ function checkInvariants(state: GameState, markPoints: number): void {
   expect(totalScore).toBe(defeatedHp + markPoints);
 }
 
-function playRandomGame(seed: number, playerCount: number, cardSet: CardSet, teams?: (string | undefined)[]) {
+function playRandomGame(
+  seed: number,
+  playerCount: number,
+  cardSet: CardSet,
+  teams?: (string | undefined)[],
+  withAbsences = false,
+) {
   let state = newGame(playerCount, { seed, cardSet, ...(teams ? { teams } : {}) });
   const rng: RngHolder = { rng: seed * 7919 };
   const allEvents: GameEvent[] = [];
@@ -74,19 +89,32 @@ function playRandomGame(seed: number, playerCount: number, cardSet: CardSet, tea
   };
 
   while (state.phase !== 'gameOver') {
-    expect(state.round.number).toBeLessThan(100);
+    expect(state.round.number).toBeLessThan(150);
+    // De temps en temps, un joueur part ou revient (au moins un joueur reste toujours présent).
+    if (withAbsences && randomInt(rng, 6) === 0) {
+      const player = pick(rng, state.players);
+      const absent = state.absent.includes(player.id);
+      if (absent) step({ type: 'rejoin', playerId: player.id });
+      else if (state.absent.length < state.players.length - 1) step({ type: 'leave', playerId: player.id });
+      continue;
+    }
+    const next = waitingPlayers(state)[0];
+    if (next === undefined) throw new Error('Partie bloquée : personne à attendre');
     if (state.phase === 'bidding') {
-      for (const p of state.players) step({ type: 'bid', playerId: p.id, amount: randomInt(rng, p.coins + 1) });
+      const player = state.players.find((p) => p.id === next)!;
+      step({ type: 'bid', playerId: next, amount: randomInt(rng, player.coins + 1) });
     } else if (state.phase === 'recap') {
-      for (const p of state.players) step({ type: 'ready', playerId: p.id });
+      step({ type: 'ready', playerId: next });
     } else {
-      for (const p of state.players) {
-        const scouted = p.specials.includes('eclaireur') && randomInt(rng, 3) === 0;
-        if (scouted) step({ type: 'scout', playerId: p.id });
-        const player = state.players.find((q) => q.id === p.id)!;
-        step({ type: 'plan', playerId: p.id, plan: randomPlan(rng, state, player, scouted) });
-        if (state.phase !== 'planning') break;
-      }
+      const player = state.players.find((p) => p.id === next)!;
+      const scouted = player.specials.includes('eclaireur') && !state.round.scouted[next] && randomInt(rng, 3) === 0;
+      if (scouted) step({ type: 'scout', playerId: next });
+      const current = state.players.find((p) => p.id === next)!;
+      step({
+        type: 'plan',
+        playerId: next,
+        plan: randomPlan(rng, state, current, scouted || !!state.round.scouted[next]),
+      });
     }
   }
   return { state, events: allEvents, actions };
@@ -110,6 +138,13 @@ describe.each(CARD_SETS)('parties simulées (cartes %s)', (cardSet) => {
       const { state } = playRandomGame(seed, count, cardSet, teams);
       expect(state.phase).toBe('gameOver');
       expect(state.sides.filter((s) => s.isTeam).every((s) => s.playerIds.length <= 3)).toBe(true);
+    }
+  });
+
+  it('20 parties avec des joueurs qui partent et reviennent vont jusqu’au bout', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const { state } = playRandomGame(seed, 3 + (seed % 4), cardSet, undefined, true);
+      expect(state.phase).toBe('gameOver');
     }
   });
 

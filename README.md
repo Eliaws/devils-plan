@@ -44,6 +44,7 @@ npm run dev
   - `--start` fait lancer la partie par le bot hôte : une partie 100 % bots se joue devant l'écran principal.
 - Les illustrations sont converties de `assets/` (PNG) en WebP légers avec `npm run cards -w @umbra/web`.
 - Galerie des effets visuels (développement uniquement) : http://localhost:5173/dev/effets
+- Les icônes de l'application installable sont générées avec `npm run icons -w @umbra/web`.
 
 Vérifications :
 
