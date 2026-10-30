@@ -25,59 +25,60 @@ export function PlayerTokens({
   const scoreOf = (sideId: string) => view.sides.find((s) => s.id === sideId)?.score ?? 0;
 
   return (
-    <ol className="flex flex-wrap items-end justify-center gap-x-[2.2vw] gap-y-4" aria-label="Joueurs">
+    <ol className="relative z-20 flex flex-wrap items-end justify-center gap-x-[2.2vw] gap-y-4" aria-label="Joueurs">
       {ordered.map((player, index) => {
         const color = playerColor(view, player.id);
         const acting = player.id === actorId;
         return (
-          <motion.li
-            key={player.id}
-            layout
-            className="relative flex w-[7.5vw] min-w-20 flex-col items-center"
-            animate={{
-              scale: acting ? 1.18 : 1,
-              opacity: player.isAbsent ? 0.35 : actorId && !acting ? 0.55 : 1,
-              filter: player.isAbsent ? 'grayscale(1)' : 'grayscale(0)',
-            }}
-            transition={{ type: 'spring', damping: 18 }}
-          >
-            <ReactionStream reactions={reactions.filter((r) => r.playerId === player.id)} />
-            <div className="relative">
-              <div
-                className="size-[4.6vw] min-h-14 min-w-14 rounded-full"
-                style={{ boxShadow: acting ? `0 0 0 3px #08080c, 0 0 0 6px ${color}, 0 0 40px ${color}` : 'none' }}
-              >
-                <PlayerAvatar playerId={player.id} color={color} className="size-full" />
-              </div>
-              {view.order.includes(player.id) && (
-                <span className="absolute -top-1 -left-1 grid size-6 place-items-center rounded-full border border-line bg-bg text-xs font-semibold tabular-nums">
-                  {index + 1}
-                </span>
-              )}
-              {view.phase !== 'gameOver' && (
-                <span
-                  className={cx(
-                    'absolute -right-1 -bottom-1 grid size-6 place-items-center rounded-full border border-line',
-                    playerStatus(view, player) === 'done' ? 'bg-venom text-bg' : 'bg-raised',
-                  )}
+          <motion.li key={player.id} layout="position" className="relative w-[7.5vw] min-w-20">
+            {/* Hors du jeton estompé : une réaction reste toujours bien visible. */}
+            <ReactionBubble reactions={reactions.filter((r) => r.playerId === player.id)} color={color} />
+            <motion.div
+              className="flex flex-col items-center"
+              animate={{
+                scale: acting ? 1.18 : 1,
+                opacity: player.isAbsent ? 0.35 : actorId && !acting ? 0.55 : 1,
+                filter: player.isAbsent ? 'grayscale(1)' : 'grayscale(0)',
+              }}
+              transition={{ type: 'spring', damping: 18 }}
+            >
+              <div className="relative">
+                <div
+                  className="size-[4.6vw] min-h-14 min-w-14 rounded-full"
+                  style={{ boxShadow: acting ? `0 0 0 3px #08080c, 0 0 0 6px ${color}, 0 0 40px ${color}` : 'none' }}
                 >
-                  {playerStatus(view, player) === 'done' ? (
-                    <Check className="size-3.5" />
-                  ) : (
-                    <StatusIcon status={playerStatus(view, player)} />
-                  )}
+                  <PlayerAvatar playerId={player.id} color={color} className="size-full" />
+                </div>
+                {view.order.includes(player.id) && (
+                  <span className="absolute -top-1 -left-1 grid size-6 place-items-center rounded-full border border-line bg-bg text-xs font-semibold tabular-nums">
+                    {index + 1}
+                  </span>
+                )}
+                {view.phase !== 'gameOver' && (
+                  <span
+                    className={cx(
+                      'absolute -right-1 -bottom-1 grid size-6 place-items-center rounded-full border border-line',
+                      playerStatus(view, player) === 'done' ? 'bg-venom text-bg' : 'bg-raised',
+                    )}
+                  >
+                    {playerStatus(view, player) === 'done' ? (
+                      <Check className="size-3.5" />
+                    ) : (
+                      <StatusIcon status={playerStatus(view, player)} />
+                    )}
+                  </span>
+                )}
+              </div>
+              <span className="mt-2 max-w-full truncate text-[1.1vw] font-medium">{player.name}</span>
+              {player.isAbsent && <span className="text-[0.9vw] text-blood">absent</span>}
+              <span className="flex items-center gap-2 text-[0.95vw] text-muted tabular-nums">
+                <span className="text-gold">{scoreOf(player.sideId)} PV</span>
+                <span className="flex items-center gap-0.5">
+                  <Coins className="size-[0.95vw]" />
+                  {player.coins}
                 </span>
-              )}
-            </div>
-            <span className="mt-2 max-w-full truncate text-[1.1vw] font-medium">{player.name}</span>
-            {player.isAbsent && <span className="text-[0.9vw] text-blood">absent</span>}
-            <span className="flex items-center gap-2 text-[0.95vw] text-muted tabular-nums">
-              <span className="text-gold">{scoreOf(player.sideId)} PV</span>
-              <span className="flex items-center gap-0.5">
-                <Coins className="size-[0.95vw]" />
-                {player.coins}
               </span>
-            </span>
+            </motion.div>
           </motion.li>
         );
       })}
@@ -85,44 +86,59 @@ export function PlayerTokens({
   );
 }
 
-function ReactionStream({ reactions }: { reactions: Reaction[] }) {
+/**
+ * Dernière réaction d'un joueur, dans une bulle à sa couleur qui pointe vers son jeton :
+ * on voit tout de suite qui a réagi. Une nouvelle réaction remplace la précédente.
+ */
+function ReactionBubble({ reactions, color }: { reactions: Reaction[]; color: string }) {
+  const latest = reactions.at(-1);
   return (
-    <div className="pointer-events-none absolute bottom-full left-1/2 z-10 h-0 w-0">
+    <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 h-0 w-0">
       <AnimatePresence>
-        {reactions.map((reaction) => {
-          const { payload } = reaction;
-          if (payload.kind === 'gif') {
-            const { gif } = payload;
-            return (
-              <span key={reaction.id} className="absolute bottom-2 left-0 -translate-x-1/2">
-                <motion.span
-                  className="block overflow-hidden rounded-2xl border-2 border-white/15 bg-raised shadow-[0_12px_40px_rgba(0,0,0,0.8)]"
-                  style={{ height: 'clamp(110px, 13vw, 240px)', aspectRatio: `${gif.width} / ${gif.height}` }}
-                  initial={{ y: 30, opacity: 0, scale: 0.5, rotate: -4 }}
-                  animate={{ y: 0, opacity: 1, scale: 1, rotate: 0 }}
-                  exit={{ y: -40, opacity: 0, scale: 0.9 }}
-                  transition={{ type: 'spring', damping: 16, stiffness: 220 }}
-                >
-                  <img src={gif.url} alt={gif.title} className="size-full object-cover" />
-                </motion.span>
-              </span>
-            );
-          }
-          const sway = reaction.id.charCodeAt(0) % 2 ? 28 : -28;
-          return (
-            <span key={reaction.id} className="absolute bottom-0 left-0 -translate-x-1/2">
-              <motion.span
-                className="block text-[3.4vw] drop-shadow-[0_6px_16px_rgba(0,0,0,0.8)]"
-                initial={{ y: 0, opacity: 0, scale: 0.4 }}
-                animate={{ y: -260, x: [0, sway, -sway / 2, 0], opacity: [0, 1, 1, 0], scale: [0.4, 1.3, 1, 1] }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 3.2, ease: 'easeOut' }}
-              >
-                {payload.emoji}
-              </motion.span>
-            </span>
-          );
-        })}
+        {latest && (
+          <motion.div
+            key={latest.id}
+            className="absolute bottom-0 left-0 flex origin-bottom -translate-x-1/2 flex-col items-center"
+            initial={{ y: 12, opacity: 0, scale: 0.4 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -16, opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
+            transition={{ type: 'spring', damping: 14, stiffness: 260 }}
+          >
+            <div
+              className="overflow-hidden rounded-2xl border-2 bg-surface shadow-[0_10px_30px_rgba(0,0,0,0.7)]"
+              style={{ borderColor: color }}
+            >
+              {latest.payload.kind === 'gif' ? (
+                <>
+                  <img
+                    src={latest.payload.gif.url}
+                    alt={latest.payload.gif.title}
+                    className="block max-w-none object-cover"
+                    style={{
+                      height: 'clamp(96px, 11vw, 220px)',
+                      aspectRatio: `${latest.payload.gif.width} / ${latest.payload.gif.height}`,
+                    }}
+                  />
+                  <p className="truncate px-2 py-0.5 text-center text-[clamp(11px,0.85vw,16px)] font-semibold">
+                    {latest.name}
+                  </p>
+                </>
+              ) : (
+                <p className="flex items-center gap-1.5 py-1 pr-3 pl-2 whitespace-nowrap">
+                  <span className="text-[clamp(20px,1.7vw,34px)] leading-none">{latest.payload.emoji}</span>
+                  <span className="max-w-[8vw] truncate text-[clamp(11px,0.85vw,16px)] font-semibold">
+                    {latest.name}
+                  </span>
+                </p>
+              )}
+            </div>
+            {/* Pointe de la bulle, vers le jeton de l'auteur. */}
+            <span
+              className="-mt-px size-0 border-x-[7px] border-t-[8px] border-x-transparent"
+              style={{ borderTopColor: color }}
+            />
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

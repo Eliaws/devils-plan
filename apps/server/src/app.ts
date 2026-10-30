@@ -15,7 +15,7 @@ export interface App {
 }
 
 /** Serveur HTTP (site compilé + /health) et Socket.IO sur le même port. */
-export function createApp(options: { webDist?: string; gifs?: GifProvider | null } = {}): App {
+export function createApp(options: { webDist?: string; gifs?: GifProvider | null; version?: string } = {}): App {
   const serveWeb =
     options.webDist && existsSync(options.webDist)
       ? sirv(options.webDist, {
@@ -31,6 +31,13 @@ export function createApp(options: { webDist?: string; gifs?: GifProvider | null
   const handler: RequestListener = (req, res) => {
     if (req.url === '/health') {
       res.writeHead(200, { 'Content-Type': 'text/plain' }).end('ok');
+      return;
+    }
+    // Diagnostic de déploiement : quel commit tourne, et les GIF sont-ils activés ?
+    if (req.url === '/version') {
+      res
+        .writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
+        .end(JSON.stringify({ version: options.version ?? 'inconnue', gifs: Boolean(options.gifs) }));
       return;
     }
     if (serveWeb) {

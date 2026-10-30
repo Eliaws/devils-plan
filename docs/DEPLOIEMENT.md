@@ -34,6 +34,8 @@ Variables d'environnement :
 
 Les variables peuvent aussi être placées dans `apps/server/.env` (lu au démarrage par `npm start`, modèle dans `apps/server/.env.example`). C'est l'endroit conseillé pour la clé GIPHY : ce fichier est ignoré par git, ne le commite jamais, et protège-le (`chmod 600 apps/server/.env`). Sur Infomaniak, crée ce fichier sur le serveur (SSH ou gestionnaire de fichiers), ou déclare la variable dans les variables d'environnement du site Node.js. Au démarrage, le journal indique « GIF activés » ou « GIF désactivés ».
 
+**Vérifier ce qui est en ligne** : `https://ton-site/version` renvoie le commit qui tourne et l'état des GIF (`{"version":"abc1234","gifs":true}`), et le bas de l'accueil affiche le commit du site compilé. Les deux doivent correspondre au dernier commit de `main` ; sinon, le build n'a pas été relancé après le `git pull`.
+
 Les parties en cours sont **sauvegardées sur disque** (au plus une écriture par seconde) et rechargées au démarrage : un redémarrage ou une mise à jour ne les efface plus, les joueurs retrouvent leur place en rechargeant la page. Le dossier de sauvegarde doit rester en place d'un déploiement à l'autre (il est ignoré par git).
 
 ## 2. Le lancer en service (systemd)

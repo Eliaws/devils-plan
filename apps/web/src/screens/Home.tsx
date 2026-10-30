@@ -117,6 +117,7 @@ export function Home({ initialCode }: { initialCode?: string | undefined }) {
           <Tv className="size-4" /> Créer la partie sur un grand écran
         </button>
         {!connected && <p className="mt-3 text-xs text-faint">Connexion au serveur…</p>}
+        <p className="text-[11px] text-faint">Version {__APP_VERSION__}</p>
       </footer>
     </main>
   );

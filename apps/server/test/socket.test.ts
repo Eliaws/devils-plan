@@ -203,6 +203,11 @@ describe('serveur Socket.IO', () => {
     expect(resumed.playerId).toBe(session.playerId);
   });
 
+  it('indique la version en ligne et si les GIF sont activés', async () => {
+    const response = await fetch(`${url}/version`);
+    expect(await response.json()).toEqual({ version: 'inconnue', gifs: true });
+  });
+
   it('valide les messages et renvoie des erreurs lisibles', async () => {
     const socket = await client();
     const bad = await socket.emitWithAck('room:join', { code: 'ZZ', name: 'Alice' });

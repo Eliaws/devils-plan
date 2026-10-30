@@ -1,11 +1,22 @@
+import { execFileSync } from 'node:child_process';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+/** Version affichée sur l'accueil : le commit compilé, pour vérifier ce qui est en ligne. */
+function appVersion(): string {
+  try {
+    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
 // En développement, Vite relaie Socket.IO vers le serveur de jeu (port 3000).
 // `host: true` rend le site accessible aux téléphones du même réseau Wi-Fi.
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(appVersion()) },
   plugins: [
     react(),
     tailwindcss(),
